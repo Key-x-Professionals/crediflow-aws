@@ -13,7 +13,9 @@ import { loadConfig } from '../lib/config';
 import {
   CicdStack,
   DataStack,
+  EventsStack,
   NetworkStack,
+  ServerlessStack,
   ServiceStack,
 } from '../lib/stacks';
 
@@ -34,6 +36,13 @@ const cicd = config.githubRepo
   : undefined;
 void cicd;
 
+// ---- Sesión 5: colas y eventos (antes del servicio, porque la API usa la cola)
+const events = new EventsStack(app, 'Events', {
+  config,
+  session: 5,
+  solicitudes: data.solicitudes,
+});
+
 // ---- Sesión 4: API en contenedores -----------------------------------------
 const service = new ServiceStack(app, 'Service', {
   config,
@@ -42,7 +51,11 @@ const service = new ServiceStack(app, 'Service', {
   solicitudes: data.solicitudes,
   documentsBucket: data.documentsBucket,
   logsBucket: data.logsBucket,
+  // TODO (sesión 5, parte B1): queue: events.queue.queue,
 });
-void service;
+
+// ---- Sesión 5: API serverless de precalificación ---------------------------
+const serverless = new ServerlessStack(app, 'Serverless', { config, session: 5 });
+void service; void serverless; void events;
 
 app.synth();
