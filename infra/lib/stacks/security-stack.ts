@@ -1,12 +1,10 @@
 /**
  * SecurityStack (sesión 6): perímetro y detección.
  *
- * TODO (laboratorio, parte B):
- *   1. webAcl: wafv2.CfnWebACL REGIONAL con reglas administradas (CommonRuleSet, KnownBadInputs,
- *      AmazonIpReputationList) y una rateBasedStatement (500 por IP)
- *   2. Asociar al ALB (loadBalancerArn) y a la etapa de API Gateway (deploymentStage.stageArn)
- *   3. Logs del WAF en un log group 'aws-waf-logs-<prefijo>'
- *   4. Si props.accountLevelSecurity: GuardDuty CfnDetector y cloudtrail.Trail hacia logsBucket
+ *  - AWS WAF (WebACL regional) con reglas administradas de AWS y límite de tasa,
+ *    asociado al ALB de la API y a la etapa de API Gateway
+ *  - GuardDuty y CloudTrail: son recursos ÚNICOS por cuenta/región.
+ *    Solo se crean cuando CF_ACCOUNT_SECURITY=true (normalmente los despliega el instructor una vez).
  */
 import * as cdk from 'aws-cdk-lib';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
@@ -28,13 +26,80 @@ export interface SecurityStackProps extends CrediFlowStackProps {
 }
 
 export class SecurityStack extends CrediFlowStack {
-  public readonly webAcl!: wafv2.CfnWebACL;
+  public readonly webAcl: wafv2.CfnWebACL;
 
   constructor(scope: Construct, id: string, props: SecurityStackProps) {
     super(scope, id, props);
-    void cdk; void cloudtrail; void guardduty; void logs; // elimina al completar el TODO
 
-    // TODO: WebACL + asociaciones + logging
-    // TODO: GuardDuty y CloudTrail (nivel de cuenta)
+    const managedRule = (name: string, priority: number, vendor = 'AWS'): wafv2.CfnWebACL.RuleProperty => ({
+      name,
+      priority,
+      overrideAction: { none: {} },
+      statement: { managedRuleGroupStatement: { vendorName: vendor, name } },
+      visibilityConfig: { sampledRequestsEnabled: true, cloudWatchMetricsEnabled: true, metricName: name },
+    });
+
+    this.webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
+      name: this.names.resource('waf'),
+      scope: 'REGIONAL',
+      defaultAction: { allow: {} },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: this.names.resource('waf'),
+      },
+      rules: [
+        managedRule('AWSManagedRulesCommonRuleSet', 1),
+        managedRule('AWSManagedRulesKnownBadInputsRuleSet', 2),
+        managedRule('AWSManagedRulesAmazonIpReputationList', 3),
+        {
+          name: 'RateLimitPorIp',
+          priority: 10,
+          action: { block: {} },
+          statement: { rateBasedStatement: { limit: 500, aggregateKeyType: 'IP' } },
+          visibilityConfig: { sampledRequestsEnabled: true, cloudWatchMetricsEnabled: true, metricName: 'RateLimitPorIp' },
+        },
+      ],
+    });
+
+    new wafv2.CfnWebACLAssociation(this, 'AlbAssociation', {
+      resourceArn: props.loadBalancer.loadBalancerArn,
+      webAclArn: this.webAcl.attrArn,
+    });
+
+    new wafv2.CfnWebACLAssociation(this, 'ApiAssociation', {
+      resourceArn: props.restApi.deploymentStage.stageArn,
+      webAclArn: this.webAcl.attrArn,
+    });
+
+    // Logs del WAF (el nombre del log group DEBE empezar con aws-waf-logs-)
+    const wafLogs = new logs.LogGroup(this, 'WafLogs', {
+      logGroupName: `aws-waf-logs-${this.names.prefix}`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: this.removalPolicy,
+    });
+    new wafv2.CfnLoggingConfiguration(this, 'WafLogging', {
+      resourceArn: this.webAcl.attrArn,
+      logDestinationConfigs: [wafLogs.logGroupArn],
+    });
+
+    if (props.accountLevelSecurity) {
+      new guardduty.CfnDetector(this, 'GuardDuty', {
+        enable: true,
+        findingPublishingFrequency: 'FIFTEEN_MINUTES',
+      });
+
+      new cloudtrail.Trail(this, 'Trail', {
+        trailName: this.names.resource('trail'),
+        bucket: props.logsBucket.bucket,
+        s3KeyPrefix: 'cloudtrail',
+        sendToCloudWatchLogs: true,
+        cloudWatchLogsRetention: logs.RetentionDays.ONE_WEEK,
+        enableFileValidation: true,
+        isMultiRegionTrail: false,
+      });
+    }
+
+    new cdk.CfnOutput(this, 'WebAclArn', { value: this.webAcl.attrArn });
   }
 }
