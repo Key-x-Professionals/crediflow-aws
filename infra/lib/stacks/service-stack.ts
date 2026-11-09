@@ -6,6 +6,7 @@
  *  - Tareas en subredes públicas con IP pública (sin NAT Gateway: costo casi cero)
  *  - Datos en la tabla DynamoDB de solicitudes (sin secretos ni VPC para la base)
  *  - Autoscaling + circuit breaker con rollback
+ *  - (sesión 5) Si recibe `queue`, la API encola cada solicitud para evaluarla
  *
  *  Costo: el ALB (~0.025 USD/h) y las tareas (~0.01 USD/h cada una) se cobran por hora:
  *  este stack se despliega al inicio de la sesión y se destruye al final.
@@ -13,6 +14,7 @@
 import * as path from 'path';
 import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import { CrediFlowFargateService, CrediFlowTable, CrediFlowVpc, SecureBucket } from '../constructs';
 import { CrediFlowStack, CrediFlowStackProps } from '../crediflow-stack';
@@ -22,6 +24,8 @@ export interface ServiceStackProps extends CrediFlowStackProps {
   readonly solicitudes: CrediFlowTable;
   readonly documentsBucket: SecureBucket;
   readonly logsBucket: SecureBucket;
+  /** Cola de evaluación (se agrega en la sesión 5) */
+  readonly queue?: sqs.IQueue;
 }
 
 export class ServiceStack extends CrediFlowStack {
@@ -52,12 +56,14 @@ export class ServiceStack extends CrediFlowStack {
         STORAGE: 'dynamo',
         TABLE_NAME: props.solicitudes.table.tableName,
         DOCUMENTS_BUCKET: props.documentsBucket.bucket.bucketName,
+        ...(props.queue ? { QUEUE_URL: props.queue.queueUrl } : {}),
       },
     });
 
     // Mínimo privilegio: solo lo que la API necesita
     props.solicitudes.table.grantReadWriteData(this.api.taskDefinition.taskRole);
     props.documentsBucket.bucket.grantReadWrite(this.api.taskDefinition.taskRole);
+    props.queue?.grantSendMessages(this.api.taskDefinition.taskRole);
 
     this.crossStackExport('ApiUrl', this.api.url, 'URL pública de la API de solicitudes');
     this.crossStackExport('AlbArn', this.api.loadBalancer.loadBalancerArn);

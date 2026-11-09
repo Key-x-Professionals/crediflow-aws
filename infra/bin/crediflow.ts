@@ -9,12 +9,15 @@
  */
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
+import { AwsSolutionsChecks } from 'cdk-nag';
 import { loadConfig } from '../lib/config';
 import {
   CicdStack,
   DataStack,
   EventsStack,
   NetworkStack,
+  ObservabilityStack,
+  SecurityStack,
   ServerlessStack,
   ServiceStack,
 } from '../lib/stacks';
@@ -27,14 +30,13 @@ const network = new NetworkStack(app, 'Network', { config, session: 3 });
 
 const data = new DataStack(app, 'Data', { config, session: 3 });
 
-const cicd = config.githubRepo
-  ? new CicdStack(app, 'Cicd', {
-      config,
-      session: 3,
-      existingProviderArn: process.env.CF_GITHUB_OIDC_PROVIDER_ARN,
-    })
-  : undefined;
-void cicd;
+if (config.githubRepo) {
+  new CicdStack(app, 'Cicd', {
+    config,
+    session: 3,
+    existingProviderArn: process.env.CF_GITHUB_OIDC_PROVIDER_ARN,
+  });
+}
 
 // ---- Sesión 5: colas y eventos (antes del servicio, porque la API usa la cola)
 const events = new EventsStack(app, 'Events', {
@@ -51,11 +53,36 @@ const service = new ServiceStack(app, 'Service', {
   solicitudes: data.solicitudes,
   documentsBucket: data.documentsBucket,
   logsBucket: data.logsBucket,
-  // TODO (sesión 5, parte B1): queue: events.queue.queue,
+  queue: events.queue.queue,
 });
 
 // ---- Sesión 5: API serverless de precalificación ---------------------------
 const serverless = new ServerlessStack(app, 'Serverless', { config, session: 5 });
-void service; void serverless; void events;
+
+// ---- Sesión 6: seguridad y observabilidad ----------------------------------
+new SecurityStack(app, 'Security', {
+  config,
+  session: 6,
+  loadBalancer: service.api.loadBalancer,
+  restApi: serverless.api.api,
+  logsBucket: data.logsBucket,
+  accountLevelSecurity: (process.env.CF_ACCOUNT_SECURITY ?? 'false') === 'true',
+});
+
+new ObservabilityStack(app, 'Observability', {
+  config,
+  session: 6,
+  api: service.api,
+  precalApi: serverless.api,
+  precalificarFn: serverless.precalificarFn,
+  workerFn: events.workerFn,
+  queue: events.queue,
+});
+
+// ---- cdk-nag: revisión automática de buenas prácticas (sesión 6) -----------
+if (config.nagEnabled) {
+  cdk.Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
+  // TODO (sesión 6, parte A): corregir hallazgos y agregar NagSuppressions JUSTIFICADAS
+}
 
 app.synth();
