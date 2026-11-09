@@ -1,0 +1,32 @@
+{
+  "name": "crediflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CrediFlow - proyecto integrador del curso AWS (Key Institute / Fedecrédito). Plataforma ficticia de solicitudes de crédito.",
+  "workspaces": [
+    "infra",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "verify": "node scripts/verify-setup.js",
+    "api:dev": "npm run dev -w apps/api",
+    "cdk": "npm run cdk -w infra --",
+    "synth": "npm run synth -w infra",
+    "diff": "npm run diff -w infra",
+    "deploy": "npm run deploy -w infra --",
+    "destroy": "npm run destroy -w infra --",
+    "encender": "npm run deploy -w infra -- --all --require-approval never",
+    "apagar": "npm run destroy -w infra -- --all --force",
+    "costos": "node scripts/costos.js"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1162.0",
+    "@aws-sdk/client-sts": "^3.1162.0"
+  }
+}
