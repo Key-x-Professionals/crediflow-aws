@@ -56,7 +56,7 @@ crediflow/
 ## Empezar (sesión 1)
 
 ```bash
-git clone <url-del-repo-base> crediflow && cd crediflow
+git clone git@github.com:Key-x-Professionals/crediflow-aws.git crediflow && cd crediflow
 cp .env.example .env            # Windows: Copy-Item .env.example .env
 # edita .env: CF_STUDENT, CDK_DEFAULT_ACCOUNT, CDK_DEFAULT_REGION, CF_ALERT_EMAIL
 npm install
