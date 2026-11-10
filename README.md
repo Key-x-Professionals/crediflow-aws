@@ -55,13 +55,23 @@ crediflow/
 
 ## Empezar (sesión 1)
 
+Este repo es la **base del curso**: no tienes permiso de push. Haz tu propio **fork** y trabaja ahí.
+
+1. Abre https://github.com/Key-x-Professionals/crediflow-aws y pulsa **Fork** (crea `TU-USUARIO/crediflow-aws`).
+2. Clona tu fork y conéctalo con la base para traer actualizaciones:
+
 ```bash
-git clone git@github.com:Key-x-Professionals/crediflow-aws.git crediflow && cd crediflow
-cp .env.example .env            # Windows: Copy-Item .env.example .env
+git clone git@github.com:TU-USUARIO/crediflow-aws.git crediflow && cd crediflow
+git remote add upstream git@github.com:Key-x-Professionals/crediflow-aws.git
+git fetch upstream --tags         # trae las etiquetas por sesión (aNN-inicio / aNN-solucion)
+
+cp .env.example .env              # Windows: Copy-Item .env.example .env
 # edita .env: CF_STUDENT, CDK_DEFAULT_ACCOUNT, CDK_DEFAULT_REGION, CF_ALERT_EMAIL
-npm install
-npm run verify                  # verifica herramientas y sesión de AWS
+npm install                       # también instala el hook de avisos (core.hooksPath)
+npm run verify                    # verifica herramientas y sesión de AWS
 ```
+
+`origin` = tu fork (ahí haces push). `upstream` = la base (solo lectura).
 
 Puntos de partida por sesión (si te atrasas, ponte al día desde la etiqueta):
 

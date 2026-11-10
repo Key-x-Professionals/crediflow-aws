@@ -1,0 +1,12 @@
+#!/bin/sh
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$branch" = "main" ]; then
+  echo ""
+  echo "  AVISO: estás haciendo commit en 'main'."
+  echo "  Este repo es la base del curso. Trabaja en TU fork y en una rama:"
+  echo "      git switch -c mi-trabajo"
+  echo ""
+  echo "  (Es solo un aviso; el commit continúa.)"
+  echo ""
+fi
+exit 0
