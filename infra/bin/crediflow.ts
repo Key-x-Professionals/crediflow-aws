@@ -96,9 +96,6 @@ if (config.nagEnabled) {
 /**
  * Reconocimientos (suppressions) JUSTIFICADOS. Cada uno es una decisión
  * consciente del curso, no una forma de "callar" la herramienta.
- *
- * Sesión 6, bloque A: quedan TRES hallazgos sin resolver. Uno se CORRIGE en el código
- * (AwsSolutions-COG1, en serverless-stack.ts) y dos se RECONOCEN aquí con su justificación.
  */
 function aplicarReconocimientos(): void {
   NagSuppressions.addStackSuppressions(network, [
@@ -118,8 +115,7 @@ function aplicarReconocimientos(): void {
   NagSuppressions.addStackSuppressions(service, [
     { id: 'AwsSolutions-ECS4', reason: 'Container Insights cobra por métrica; el dashboard de la sesión 6 usa las métricas estándar del servicio.' },
     { id: 'AwsSolutions-ECS2', reason: 'Las variables de entorno no contienen secretos: el acceso a DynamoDB es por rol IAM.' },
-    // TODO (sesión 6, bloque A): falta reconocer AwsSolutions-EC23 (el balanceador acepta tráfico de
-    //   0.0.0.0/0). ¿Es un error o es el diseño? Agrega aquí { id: 'AwsSolutions-EC23', reason: '...' }
+    { id: 'AwsSolutions-EC23', reason: 'El ALB y las tareas son públicos por diseño (sin NAT para costo cero); el SG solo admite tráfico del ALB y WAF protege el perímetro.' },
     { id: 'CdkNagValidationFailure', reason: 'El CIDR del VPC es una referencia entre stacks que la regla no puede resolver.' },
     { id: 'AwsSolutions-IAM5', reason: 'Comodines generados por los grants de CDK (bucket de documentos, ECR y logs).' },
   ], true);

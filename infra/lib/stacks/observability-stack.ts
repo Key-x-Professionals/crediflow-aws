@@ -9,9 +9,6 @@
  *
  *  Métricas de negocio (namespace CrediFlow, emitidas por el worker con Powertools):
  *   - SolicitudesEvaluadas, SolicitudesAprobadas, SolicitudesRechazadas
- *
- * El stack viene casi completo para que lo LEAS. Te toca escribir (TODO del bloque C):
- * la alarma de tareas sanas y el widget de saturación del dashboard.
  */
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
@@ -54,7 +51,6 @@ export class ObservabilityStack extends CrediFlowStack {
 
     const ecsCpu = props.api.service.metricCpuUtilization({ period });
     const ecsMem = props.api.service.metricMemoryUtilization({ period });
-    void ecsCpu; void ecsMem; // elimina esta línea al completar el TODO del widget
 
     const apigwRequests = props.precalApi.api.metricCount({ period, statistic: 'Sum' });
     const apigw5xx = props.precalApi.api.metricServerError({ period, statistic: 'Sum' });
@@ -110,11 +106,15 @@ export class ObservabilityStack extends CrediFlowStack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // TODO (bloque C): la alarma que falta, 'HealthyHostsAlarm' (alarm-api-hosts):
-    //   "menos de 2 tareas sanas detrás del balanceador" → metric: healthyHosts, threshold: 2,
-    //   evaluationPeriods: 2, comparisonOperator LESS_THAN_THRESHOLD y, ojo, treatMissingData BREACHING
-    //   (si no hay datos es que no hay tareas). Guárdala en const alarmHealthy.
-    void healthyHosts; // elimina esta línea al completar el TODO
+    const alarmHealthy = new cloudwatch.Alarm(this, 'HealthyHostsAlarm', {
+      alarmName: this.names.resource('alarm-api-hosts'),
+      alarmDescription: 'Menos de 2 tareas sanas detrás del ALB. Runbook RB-01.',
+      metric: healthyHosts,
+      threshold: 2,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+    });
 
     const alarmLambda = new cloudwatch.Alarm(this, 'LambdaErrorsAlarm', {
       alarmName: this.names.resource('alarm-lambda-errores'),
@@ -146,8 +146,7 @@ export class ObservabilityStack extends CrediFlowStack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // TODO (bloque C): agrega alarmHealthy a esta lista para que también avise por correo
-    this.alerts.bind(alarm5xx, alarmLatency, alarmLambda, alarmQueueAge, alarmDlq);
+    this.alerts.bind(alarm5xx, alarmLatency, alarmHealthy, alarmLambda, alarmQueueAge, alarmDlq);
 
     // ---- Dashboard -------------------------------------------------------
     this.dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
@@ -168,7 +167,7 @@ export class ObservabilityStack extends CrediFlowStack {
       new cloudwatch.GraphWidget({ title: 'Latencia p95 (s)', left: [albLatencyP95], right: [apigwLatencyP95], width: 8 }),
     );
     this.dashboard.addWidgets(
-      // TODO (bloque C): el widget de saturación → GraphWidget 'Saturación ECS (%)' con left: [ecsCpu, ecsMem], width: 8
+      new cloudwatch.GraphWidget({ title: 'Saturación ECS (%)', left: [ecsCpu, ecsMem], width: 8 }),
       new cloudwatch.GraphWidget({ title: 'Cola de evaluaciones', left: [queueDepth, dlqDepth], right: [queueAge], width: 8 }),
       new cloudwatch.GraphWidget({ title: 'Errores Lambda', left: [lambdaErrors], width: 8 }),
     );
@@ -178,7 +177,7 @@ export class ObservabilityStack extends CrediFlowStack {
       new cloudwatch.SingleValueWidget({ title: 'Rechazadas (5 min)', metrics: [business('SolicitudesRechazadas')], width: 6 }),
       new cloudwatch.AlarmStatusWidget({
         title: 'Alarmas',
-        alarms: [alarm5xx, alarmLatency, alarmLambda, alarmQueueAge, alarmDlq], // TODO (bloque C): agrega alarmHealthy
+        alarms: [alarm5xx, alarmLatency, alarmHealthy, alarmLambda, alarmQueueAge, alarmDlq],
         width: 6,
       }),
     );

@@ -31,7 +31,7 @@ export class ServerlessStack extends CrediFlowStack {
       userPoolName: this.names.resource('users'),
       selfSignUpEnabled: false,
       signInAliases: { email: true },
-      passwordPolicy: { minLength: 10, requireDigits: true, requireUppercase: true },
+      passwordPolicy: { minLength: 10, requireDigits: true, requireUppercase: true, requireLowercase: true, requireSymbols: true },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: this.removalPolicy,
       featurePlan: cognito.FeaturePlan.ESSENTIALS,
