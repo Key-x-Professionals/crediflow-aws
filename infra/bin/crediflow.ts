@@ -14,6 +14,7 @@ import {
   CicdStack,
   DataStack,
   NetworkStack,
+  ServiceStack,
 } from '../lib/stacks';
 
 const app = new cdk.App();
@@ -30,17 +31,26 @@ const oidcProviderArn =
 // ---- Sesión 3: red, datos y pipeline ---------------------------------------
 const network = new NetworkStack(app, 'Network', { config, session: 3 });
 
-// TODO (bloque C): descomenta cuando NetworkStack esté completo
-// const data = new DataStack(app, 'Data', { config, session: 3 });
+const data = new DataStack(app, 'Data', { config, session: 3 });
 
-// TODO (bloque D): descomenta cuando tengas tu repositorio y CF_GITHUB_REPO en .env
-// const cicd = config.githubRepo
-//   ? new CicdStack(app, 'Cicd', {
-//       config,
-//       session: 3,
-//       existingProviderArn: oidcProviderArn,
-//     })
-//   : undefined;
-void network; void DataStack; void CicdStack;
+const cicd = config.githubRepo
+  ? new CicdStack(app, 'Cicd', {
+      config,
+      session: 3,
+      existingProviderArn: oidcProviderArn,
+    })
+  : undefined;
+void cicd;
+
+// ---- Sesión 4: API en contenedores -----------------------------------------
+const service = new ServiceStack(app, 'Service', {
+  config,
+  session: 4,
+  network: network.network,
+  solicitudes: data.solicitudes,
+  documentsBucket: data.documentsBucket,
+  logsBucket: data.logsBucket,
+});
+void service;
 
 app.synth();
