@@ -1,0 +1,74 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "IamDelProyecto",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:UpdateRole", "iam:UpdateAssumeRolePolicy",
+        "iam:TagRole", "iam:UntagRole", "iam:PassRole",
+        "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy", "iam:ListRolePolicies",
+        "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole", "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile",
+        "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile", "iam:GetInstanceProfile",
+        "iam:CreatePolicy", "iam:DeletePolicy", "iam:GetPolicy", "iam:GetPolicyVersion",
+        "iam:CreatePolicyVersion", "iam:DeletePolicyVersion", "iam:ListPolicyVersions", "iam:TagPolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/crediflow-*",
+        "arn:aws:iam::*:role/cdk-*",
+        "arn:aws:iam::*:role/CrediFlow-*",
+        "arn:aws:iam::*:instance-profile/crediflow-*",
+        "arn:aws:iam::*:policy/crediflow-*",
+        "arn:aws:iam::*:policy/CrediFlow-*"
+      ]
+    },
+    {
+      "Sid": "OidcGithubYLecturaIam",
+      "Effect": "Allow",
+      "Action": [
+        "iam:ListRoles", "iam:ListPolicies", "iam:GetAccountSummary", "iam:ListOpenIDConnectProviders",
+        "iam:GetOpenIDConnectProvider", "iam:CreateOpenIDConnectProvider", "iam:TagOpenIDConnectProvider",
+        "iam:CreateServiceLinkedRole", "iam:GenerateServiceLastAccessedDetails", "iam:GetServiceLastAccessedDetails",
+        "iam:SimulatePrincipalPolicy", "iam:SimulateCustomPolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AsumirRolesDelProyecto",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::*:role/crediflow-*"
+    },
+    {
+      "Sid": "MiPropioUsuario",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser", "iam:ChangePassword", "iam:GetLoginProfile",
+        "iam:ListMFADevices", "iam:CreateVirtualMFADevice", "iam:EnableMFADevice", "iam:ResyncMFADevice",
+        "iam:ListAccessKeys", "iam:GetAccessKeyLastUsed"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:user/${aws:username}",
+        "arn:aws:iam::*:mfa/${aws:username}"
+      ]
+    },
+    {
+      "Sid": "VerCostosYFreeTier",
+      "Effect": "Allow",
+      "Action": ["budgets:ViewBudget", "budgets:Describe*", "ce:Get*", "ce:Describe*", "ce:List*", "freetier:Get*", "account:GetAccountInformation"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "NuncaLlavesNiUsuarios",
+      "Effect": "Deny",
+      "Action": [
+        "iam:CreateAccessKey", "iam:UpdateAccessKey",
+        "iam:CreateUser", "iam:DeleteUser", "iam:CreateLoginProfile", "iam:UpdateLoginProfile",
+        "iam:CreateGroup", "iam:AddUserToGroup", "iam:AttachUserPolicy", "iam:PutUserPolicy",
+        "iam:AttachGroupPolicy", "iam:PutGroupPolicy", "iam:DeleteAccountAlias", "iam:CreateAccountAlias"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
