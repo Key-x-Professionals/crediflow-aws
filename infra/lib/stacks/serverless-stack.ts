@@ -5,9 +5,6 @@
  *  - API Gateway REST con autorizador Cognito
  *  - Lambda `precalificar` que calcula elegibilidad y guarda en DynamoDB
  *  - Lambda `consultar` que lee precalificaciones del usuario
- *
- * El stack viene casi completo para que lo LEAS. Te toca escribir lo que decide la seguridad
- * (busca los TODO del bloque A): los permisos mínimos de cada función y la ruta protegida que falta.
  */
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
@@ -65,7 +62,7 @@ export class ServerlessStack extends CrediFlowStack {
       environment: { TABLE_NAME: this.table.table.tableName },
       removalPolicy: this.removalPolicy,
     });
-    // TODO (bloque A): permiso mínimo → precalificar solo ESCRIBE en la tabla (grantWriteData)
+    this.table.table.grantWriteData(this.precalificarFn.fn);
 
     const consultarFn = new CrediFlowFunction(this, 'ConsultarFn', {
       functionName: this.names.lambda('consultar-precal'),
@@ -75,7 +72,7 @@ export class ServerlessStack extends CrediFlowStack {
       environment: { TABLE_NAME: this.table.table.tableName },
       removalPolicy: this.removalPolicy,
     });
-    // TODO (bloque A): permiso mínimo → consultar solo LEE de la tabla (grantReadData)
+    this.table.table.grantReadData(consultarFn.fn);
 
     const healthFn = new CrediFlowFunction(this, 'HealthFn', {
       functionName: this.names.lambda('precal-health'),
@@ -93,9 +90,8 @@ export class ServerlessStack extends CrediFlowStack {
       removalPolicy: this.removalPolicy,
     });
     this.api.addRoute('health', 'GET', healthFn.fn);
+    this.api.addRoute('precalificar', 'POST', this.precalificarFn.fn, { auth: true });
     this.api.addRoute('precalificaciones', 'GET', consultarFn.fn, { auth: true });
-    // TODO (bloque A): falta la ruta principal, protegida igual que la anterior con el autorizador de Cognito:
-    //   POST /precalificar → this.precalificarFn.fn, con { auth: true }
 
     // ---- Salidas ---------------------------------------------------------
     this.crossStackExport('PrecalApiUrl', this.api.url, 'URL de la API de precalificación');
