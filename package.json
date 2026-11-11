@@ -24,6 +24,7 @@
     "destroy": "npm run destroy -w infra --",
     "encender": "npm run deploy -w infra -- --all --require-approval never",
     "apagar": "npm run destroy -w infra -- --all --force",
+    "nag": "node scripts/nag.js",
     "costos": "node scripts/costos.js"
   },
   "devDependencies": {

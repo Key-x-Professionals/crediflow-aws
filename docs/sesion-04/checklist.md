@@ -1,32 +1,18 @@
 # Sesión 4 · Checklist de verificación (por equipo)
 
-## Contenedores
+Marca cada punto solo cuando **todos** los integrantes lo hayan completado.
 
-- [ ] Construí la imagen localmente y respondió `/health`
-- [ ] Puedo explicar las dos etapas del Dockerfile y por qué corre como `node`, no `root`
-
-## ServiceStack
-
-- [ ] Desplegado por el pipeline (o local con justificación)
-- [ ] 2 tareas en 2 AZ distintas; sé por qué tienen IP pública (sin NAT Gateway, decisión de costo) y qué las protege (security group)
-- [ ] ALB público con 2 targets `healthy`
-- [ ] La API escribe en DynamoDB con el rol de la tarea (sin contraseñas); vi los ítems en Explore items
-- [ ] Frontend conectado con `web-env` y muestra `env: dev`
-
-## Pruebas
-
-- [ ] Autorreparación: detuve una tarea, `/health` nunca falló, anoté el tiempo de recuperación: ____ s
+- [ ] Construí la imagen localmente, respondió `/health` y puedo explicar las dos etapas del Dockerfile y por qué corre como `node`
+- [ ] `ServiceStack` desplegado por el pipeline (o desde mi máquina, con el motivo anotado)
+- [ ] Dos tareas en dos zonas distintas; balanceador con dos destinos *healthy*
+- [ ] Sé por qué las tareas tienen IP pública (sin NAT Gateway, decisión de costo) y qué las protege (su security group solo acepta al balanceador)
+- [ ] La API escribe en DynamoDB con el rol de la tarea, sin contraseñas; vi los ítems en la consola
+- [ ] Frontend conectado con `web-env`, mostrando `env: dev`
+- [ ] Autorreparación: detuve una tarea, `/health` no falló y anoté el tiempo de recuperación: ____ s
 - [ ] Carga: p50 ____ ms, p95 ____ ms; el servicio escaló a ____ tareas
-- [ ] Rollback: despliegue con `FAIL_HEALTH` revertido automáticamente; la API no dejó de responder
+- [ ] Rollback: el despliegue con `FAIL_HEALTH` se deshizo solo y la API no dejó de responder; tiempo: ____ min
+- [ ] Documento `rto-rpo-<equipo>.md` con objetivos justificados, dos valores medidos y el costo de mejorarlos
+- [ ] Podemos explicar por qué una aplicación **sin estado** es requisito para escalar en horizontal
+- [ ] **`npm run apagar` terminado y `npm run costos` sin recursos por hora**
 
-## Disponibilidad
-
-- [ ] Documento RTO/RPO con valores justificados y el costo de mejorarlos
-- [ ] Puedo explicar por qué una app **sin estado** es requisito para escalar horizontalmente
-- [ ] Sé qué pasa si una AZ completa falla (y lo puedo demostrar con la consola de ECS)
-
-## Costos
-
-- [ ] `npm run apagar` ejecutado al cierre; `npm run costos` sin recursos por hora
-
-**Validado por:** ____________
+La guía completa está en [guia-laboratorio.md](guia-laboratorio.md).

@@ -1,33 +1,20 @@
 # Sesión 6 · Checklist de verificación (por equipo)
 
-## Seguridad
+Marca cada punto solo cuando **todos** los integrantes lo hayan completado.
 
-- [ ] `npm run nag` sin `ERROR`; cada supresión tiene un `reason` defendible
-- [ ] WAF asociado al ALB y a API Gateway; 403 por contenido malicioso y por rate limit
-- [ ] Encontré en CloudTrail mi `stop-task` de la sesión 4 y un `AssumeRoleWithWebIdentity` del pipeline
-- [ ] Vi un hallazgo de GuardDuty (de muestra) y sé qué haría con él
-- [ ] Puedo explicar defensa en profundidad con 4 capas de CrediFlow (identidad, red, perímetro, datos)
+- [ ] `npm run nag` sin errores: un hallazgo corregido y otro reconocido con una razón que explica qué, por qué y qué lo compensa
+- [ ] `Security` completo: 403 por contenido en las dos puertas y 403 por tasa
+- [ ] Vi en los registros del WAF qué regla bloqueó cada petición
+- [ ] Encontré en CloudTrail la entrada del pipeline por OIDC y mis propios `stop-task`
+- [ ] `Observability` completo: tablero con datos y siete alarmas en `OK`
+- [ ] Puedo explicar por qué `alarm-api-hosts` trata la falta de datos como alarma
+- [ ] Tres consultas de Logs Insights guardadas, incluida la que sigue una solicitud por su identificador
+- [ ] Simulacro: detectamos en ____ min y mitigamos en ____ min; sabemos qué se cambió, quién y cuándo
+- [ ] Sabemos qué vio y qué no vio la detección de deriva, y por qué `cdk diff` no la muestra
+- [ ] Runbook del equipo completado, con un paso nuevo aprendido en el simulacro
+- [ ] Postmortem sin culpables con resumen, impacto, línea de tiempo, causa raíz y acciones
+- [ ] Demo final presentada; cada integrante explicó una parte
+- [ ] Pull request final fusionado con el CI en verde
+- [ ] **`npm run apagar` terminado y cero recursos con mi etiqueta `Student`**
 
-## Observabilidad
-
-- [ ] Dashboard con tráfico, errores, latencia, saturación, cola y métricas de negocio
-- [ ] 6 alarmas en `OK`, suscripción de correo confirmada
-- [ ] 3 consultas de Logs Insights (errores, p95 por ruta, evaluaciones por resultado)
-- [ ] Service map de X-Ray con los dos flujos
-- [ ] Sé qué son las 4 señales doradas y qué alarma cubre cada una en CrediFlow
-
-## Operación
-
-- [ ] Simulacro: detectado en ____ min, mitigado en ____ min, causa: ____________
-- [ ] `cdk diff` mostró la deriva y `cdk deploy` la eliminó
-- [ ] `runbook-<equipo>.md` con comandos reales
-- [ ] `postmortem-<equipo>.md` sin culpas, con acciones y responsables
-
-## Demo final
-
-- [ ] Flujo completo desde el frontend hasta el correo
-- [ ] Precalificación con login
-- [ ] Dashboard y alarma en vivo
-- [ ] Cada integrante respondió una pregunta sobre el código
-
-**Validado por:** ____________
+La guía completa está en [guia-laboratorio.md](guia-laboratorio.md).

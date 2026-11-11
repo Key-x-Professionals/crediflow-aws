@@ -38,12 +38,12 @@ Si olvidas apagar, el presupuesto de la cuenta (lo administra el instructor, con
 | 3 | VPC sin NAT, DynamoDB, 2 buckets, rol OIDC | ~0.00 | ~0.01 USD/mes (S3) |
 | 4 | + ALB + 2 tareas Fargate 0.25 vCPU ARM + 2 IP públicas | ~0.20 | 0.00 (apagado) |
 | 5 | + Lambda, SQS, EventBridge, SNS, API Gateway, Cognito | ~0.20 | ~0.00 |
-| 6 | + WAF (5 USD/mes prorrateado por hora ≈ 0.02) + dashboard + 6 alarmas | ~0.25 | dashboard 3 USD/mes y alarmas 0.60 USD/mes **si no se apagan** |
+| 6 | + WAF (9 USD/mes prorrateado ≈ 0.04) + tablero + 7 alarmas | ~0.25 | WAF 9 USD/mes, tablero 3 USD/mes y alarmas 0.70 USD/mes **si no se borran** |
 | Pipeline (GitHub Actions) | Runners de GitHub, gratis en repos públicos / 2,000 min en privados | 0.00 | 0.00 |
 
 **Total por alumno para todo el curso: menos de 1 USD** si se apaga al final de cada sesión. Con 15 alumnos, el curso completo cabe holgadamente en los USD 100 de crédito; el margen es para olvidos. El instructor mantiene además su entorno de referencia (~0.50 USD por sesión) y GuardDuty a nivel de cuenta (30 días de prueba gratis; después unos pocos dólares al mes por el volumen de CloudTrail de toda la cuenta).
 
-Lo que **no** cuesta: IAM Identity Center, IAM, Budgets (los dos primeros gratis), Cost Explorer (la consola), CloudFormation, CDK, Cognito hasta 10,000 usuarios activos, Lambda hasta 1 millón de invocaciones y 400,000 GB-s al mes, DynamoDB hasta 25 GB, SQS hasta 1 millón de peticiones, SNS hasta 1 millón de publicaciones, EventBridge (eventos de servicios AWS gratis; personalizados 1 USD por millón).
+Lo que **no** cuesta: IAM, Budgets (los dos primeros gratis), Cost Explorer (la consola), CloudFormation, CDK, Cognito hasta 10,000 usuarios activos, Lambda hasta 1 millón de invocaciones y 400,000 GB-s al mes, DynamoDB hasta 25 GB, SQS hasta 1 millón de peticiones, SNS hasta 1 millón de publicaciones, EventBridge (eventos de servicios AWS gratis; personalizados 1 USD por millón).
 
 ## Cómo lo verificas tú
 

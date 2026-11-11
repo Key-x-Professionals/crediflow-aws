@@ -1,23 +1,26 @@
-# Sesión 5 · Reto opcional
+# Sesión 5 · Reto para casa: pruebas límite del motor de precalificación
 
-*No afecta el avance del proyecto.*
+Opcional. No cuesta nada: todo ocurre en tu máquina y en el CI de tu repositorio. **No hay que encender nada.**
 
-## R1. Idempotencia en la API (no solo en el worker)
+**Objetivo.** Encontrar los bordes de la regla de negocio de la precalificación y dejarlos cubiertos con pruebas automáticas.
 
-Agrega soporte al header `X-Idempotency-Key` en `POST /solicitudes`: si llega la misma clave dos veces, devuelve la misma solicitud sin crear otra. Guarda la clave en DynamoDB (reutiliza la tabla de idempotencia del worker o agrega un atributo con índice único por condición). Prueba con `curl` dos veces.
+**Cómo se hace.**
 
-## R2. Validación de entrada en API Gateway
+1. Lee `apps/precalificacion/src/motor.ts` y haz una tabla de casos límite. Algunos para empezar: una relación deuda/ingreso exactamente en 40 %; un ingreso de 399 y uno de 400; plazos de 12 y 13 meses, de 36 y 37, de 60 y 61; deudas mayores que el ingreso; el monto máximo cuando ya no queda capacidad de pago.
+2. Para cada caso, decide **antes de ejecutar** qué resultado esperas y por qué.
+3. Escribe al menos cinco pruebas nuevas en `apps/precalificacion/src/motor.test.ts`.
+4. Si una prueba revela un comportamiento que te parece incorrecto para el negocio, **no cambies la regla**: documenta el caso y tu propuesta.
 
-Define un *request model* (JSON Schema) para `/precalificar` y un `RequestValidator` en `CrediFlowRestApi`, para que las peticiones inválidas se rechacen **antes** de invocar la Lambda (y no cuesten). Compara en los logs de acceso.
+**Cómo comprobar que funciona.**
 
-## R3. Archivo de eventos y replay
+```bash
+npm test -w apps/precalificacion
+git checkout -b test/motor-limites && git add -A && git commit -m "test: casos límite del motor de precalificación"
+git push -u origin test/motor-limites && gh pr create --fill
+```
 
-Activa un **Archive** en el bus de eventos (`bus.archive(...)`) y haz un **replay** de los eventos de la última hora. ¿Para qué serviría en CrediFlow? ¿Qué pasa con el notificador si los eventos se repiten?
+El CI de tu pull request debe ejecutar tus pruebas y terminar en verde. **No lo fusiones todavía:** con todo apagado, el despliegue fallaría por falta del rol. Lo fusionarás en la sesión 6, en el bloque E, junto con el trabajo de ese día.
 
-## R4. Step Functions para una evaluación en pasos
+**Qué entregas.** En el canal del curso: tu tabla de casos (entrada, resultado esperado, por qué es un borde), el enlace al pull request con el CI en verde y, si encontraste algo discutible, una frase explicándolo. Si usaste IA (prompt 5.1), cuenta qué le pediste y qué casos descartaste.
 
-Reemplaza la Lambda `evaluador` por una máquina de estados: verificar identidad (simulada) → calcular score → si score < 650, revisión manual (espera con `waitForTaskToken`) → notificar. Dibuja el flujo con Claude antes de escribirlo.
-
-## R5. Powertools Idempotency
-
-Sustituye la idempotencia manual del worker por `@aws-lambda-powertools/idempotency` con `DynamoDBPersistenceLayer`. ¿Qué casos cubre que el código manual no?
+**Bonus.** Sustituye la idempotencia hecha a mano del evaluador por la utilidad *Idempotency* de Powertools for AWS Lambda, en una rama aparte, y compara cuántas líneas quedan. Solo código y pruebas locales: no hace falta desplegar.

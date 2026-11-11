@@ -1,31 +1,18 @@
 # Sesión 3 · Checklist de verificación (por equipo)
 
-## CDK
+Marca cada punto solo cuando **todos** los integrantes lo hayan completado.
 
-- [ ] `npx cdk ls` muestra mis stacks con mi nombre de alumno
-- [ ] `Network` y `Data` en `CREATE_COMPLETE`; el VPC no tiene NAT Gateway y la tabla DynamoDB es bajo demanda
-- [ ] Puedo explicar qué hace `this.names.resource()` y por qué no escribimos nombres a mano
-- [ ] Hice un `cdk diff` con un cambio destructivo y lo reconocí **sin** desplegar
-- [ ] Entiendo la diferencia entre construct, stack y app
-- [ ] Vi los Exports en CloudFormation y sé qué pasa si borro `Network` antes que `Data`
+- [ ] `cdk ls` muestra mis stacks con mi nombre de alumno
+- [ ] `Network` desplegado: VPC en dos zonas, sin NAT Gateway, con las cinco etiquetas
+- [ ] Leímos el diff de cambiar el CIDR y podemos explicar qué significa `requires replacement`
+- [ ] `Data` desplegado: tabla `tbl-solicitudes` bajo demanda con dos índices y dos buckets cifrados y sin acceso público
+- [ ] `npm test` pasa, con al menos una prueba escrita por mí
+- [ ] Tengo mi repositorio en GitHub y `CF_GITHUB_REPO` apunta a él
+- [ ] El rol `role-github-deploy` solo confía en mi repositorio (lo leí en *Trust relationships*)
+- [ ] En GitHub hay un ARN y variables de configuración, y **ninguna** llave de acceso
+- [ ] Pull request revisado por un compañero, CI en verde, fusionado
+- [ ] El job de dev desplegó con OIDC; no lanzamos prod
+- [ ] `npm run apagar` ejecutado y `npm run costos` sin recursos por hora
+- [ ] Podemos explicar por qué CrediFlow pasó de RDS a DynamoDB y qué se cede con el cambio
 
-## Pruebas
-
-- [ ] `npm test` pasa con al menos una prueba nueva escrita por el equipo
-
-## Git y pipeline
-
-- [ ] Cada integrante tiene su propio repositorio GitHub con el código
-- [ ] `Cicd` desplegado; la trust policy del rol solo admite mi repositorio
-- [ ] Secretos y variables configurados en GitHub (`AWS_DEPLOY_ROLE_ARN`, `CF_STUDENT`, ...)
-- [ ] Un PR con CI verde, revisado por un compañero, mergeado
-- [ ] El job `dev` desplegó con OIDC (sin llaves de acceso en ningún lado)
-- [ ] El job `prod` pidió aprobación
-
-## Limpieza
-
-- [ ] Recursos manuales de la sesión 2 eliminados (`despliegue-manual limpiar`) y `npm run costos` sin recursos por hora
-- [ ] No quedan recursos con `ManagedBy=manual`:
-  `aws resourcegroupstaggingapi get-resources --tag-filters Key=ManagedBy,Values=manual`
-
-**Validado por:** ____________
+La guía completa está en [guia-laboratorio.md](guia-laboratorio.md).

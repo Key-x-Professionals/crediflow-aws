@@ -1,25 +1,49 @@
-# Sesión 2 · Reto opcional: endurecer el servidor artesanal
+# Sesión 2 · Reto para casa (opcional, 30-40 min, sin costo)
 
-*No afecta el avance del proyecto. 45-60 min.*
+**Objetivo.** Un bucket que (1) rechaza cualquier petición que no llegue por HTTPS y (2) guarda las versiones anteriores de cada objeto, de modo que puedas recuperar un archivo borrado.
 
-Elige uno o varios:
+**Cómo.** Crea el bucket y aplícale una política con un `Deny` cuando `aws:SecureTransport` sea `false`; después activa el versionado:
 
-## R1. Bucket con política que exige HTTPS y el rol de la EC2
+```bash
+# Mac
+export RETO=crediflow-$CF_STUDENT-reto2-$CDK_DEFAULT_ACCOUNT
+aws s3 mb s3://$RETO
+cat > politica-https.json <<EOF
+{"Version":"2012-10-17","Statement":[{"Sid":"SoloHTTPS","Effect":"Deny","Principal":"*","Action":"s3:*",
+  "Resource":["arn:aws:s3:::$RETO","arn:aws:s3:::$RETO/*"],
+  "Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}
+EOF
+aws s3api put-bucket-policy --bucket $RETO --policy file://politica-https.json
+aws s3api put-bucket-versioning --bucket $RETO --versioning-configuration Status=Enabled
+echo "version 1" > doc.txt && aws s3 cp doc.txt s3://$RETO/doc.txt
+echo "version 2" > doc.txt && aws s3 cp doc.txt s3://$RETO/doc.txt
+aws s3 rm s3://$RETO/doc.txt
+```
 
-Agrega una *bucket policy* que (a) niegue cualquier request sin `aws:SecureTransport`, y (b) niegue `s3:PutObject` a cualquier principal que no sea el rol de la EC2. Verifica con `aws s3 cp` desde tu usuario (debe fallar) y desde Session Manager en la EC2 (debe funcionar).
+En Windows usa `$env:RETO = "crediflow-$env:CF_STUDENT-reto2-$env:CDK_DEFAULT_ACCOUNT"`, escribe el JSON en `politica-https.json` con VS Code (reemplazando el nombre del bucket) y los mismos comandos con `$env:RETO`.
 
-## R2. EC2 en subred privada
+**Cómo comprobar.** Primero, que HTTP queda rechazado y HTTPS no:
 
-Mueve la API a `private-a`: crea un **NAT Gateway** en `public-a` (para que el user data pueda instalar paquetes), una tabla de rutas privada, y expón la API con un **Application Load Balancer** en las subredes públicas. Documenta el costo adicional del NAT (y por qué en la sesión 3 CDK lo crea por ti).
+```bash
+aws s3 ls s3://$RETO --endpoint-url http://s3.us-east-1.amazonaws.com     # AccessDenied
+aws s3 ls s3://$RETO                                                       # funciona (vacío: borraste el archivo)
+```
 
-## R3. Cifrado de la base de datos con tu propia llave (KMS)
+Después, que el archivo se puede recuperar. Lista las versiones: verás dos versiones de `doc.txt` y una **marca de borrado** (*delete marker*). Borrar la marca "des-borra" el objeto:
 
-Crea una llave KMS administrada por el cliente, restaura el snapshot de RDS con esa llave y actualiza el secreto. ¿Qué cambia en la responsabilidad compartida?
+```bash
+aws s3api list-object-versions --bucket $RETO --query '{Versiones:Versions[].[Key,VersionId,IsLatest],Marcas:DeleteMarkers[].[Key,VersionId]}'
+aws s3api delete-object --bucket $RETO --key doc.txt --version-id <VersionId de la marca>
+aws s3 cp s3://$RETO/doc.txt -                                             # imprime "version 2"
+```
 
-## R4. Backups automáticos y restauración
+**Qué entregas.** En el canal del curso: tu `politica-https.json` y una captura con el `AccessDenied` por HTTP y con el archivo recuperado. Si usaste IA, cuenta qué le pediste y qué tuviste que corregir.
 
-Activa `--backup-retention-period 7`, crea una solicitud, borra la tabla `solicitudes` con `psql` desde la EC2 (`dnf install postgresql16`), y restaura **a un punto en el tiempo** anterior. Mide tu RTO real.
+**Limpieza del reto.** Un bucket con versionado no se vacía con `rb --force`: hay que borrar todas las versiones y marcas. Lo más simple es desde la consola (**S3 → tu bucket → Empty**, y luego **Delete**), o por CLI:
 
-## Entrega
+```bash
+aws s3api delete-objects --bucket $RETO --delete "$(aws s3api list-object-versions --bucket $RETO --query '{Objects: [Versions,DeleteMarkers][][].{Key:Key,VersionId:VersionId}}' --output json)"
+aws s3 rb s3://$RETO
+```
 
-Comandos usados + captura de la verificación en el canal del curso.
+**Bonus.** Agrega una regla de ciclo de vida que elimine las versiones no vigentes a los 7 días (`aws s3api put-bucket-lifecycle-configuration`). ¿Por qué conviene tenerla siempre que se activa el versionado?

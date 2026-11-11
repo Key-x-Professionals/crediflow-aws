@@ -87,7 +87,7 @@ Docker Desktop en Windows requiere WSL 2. Si pide activarlo: `wsl --install` y r
 ## Clonar el repositorio y verificar
 
 ```bash
-git clone <url-del-repo-base> crediflow
+git clone https://github.com/Key-x-Professionals/crediflow-aws.git crediflow
 cd crediflow
 cp .env.example .env            # Windows: Copy-Item .env.example .env
 npm install

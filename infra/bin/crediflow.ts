@@ -25,6 +25,14 @@ import {
 const app = new cdk.App();
 const config = loadConfig();
 
+// El proveedor OIDC de GitHub es UNO por cuenta. En la cuenta del curso ya existe (lo creó el
+// instructor), así que por defecto se reutiliza. Solo si la cuenta es tuya y no lo tiene:
+// CF_CREATE_OIDC_PROVIDER=true hace que el construct lo cree.
+const oidcProviderArn =
+  process.env.CF_CREATE_OIDC_PROVIDER === 'true'
+    ? undefined
+    : `arn:aws:iam::${config.account}:oidc-provider/token.actions.githubusercontent.com`;
+
 // ---- Sesión 3: red, datos y pipeline ---------------------------------------
 const network = new NetworkStack(app, 'Network', { config, session: 3 });
 
@@ -34,7 +42,7 @@ const cicd = config.githubRepo
   ? new CicdStack(app, 'Cicd', {
       config,
       session: 3,
-      existingProviderArn: process.env.CF_GITHUB_OIDC_PROVIDER_ARN,
+      existingProviderArn: oidcProviderArn,
     })
   : undefined;
 

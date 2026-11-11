@@ -4,10 +4,22 @@
  *
  *   node scripts/load/carga.js http://<alb-dns> 60 20
  *                              URL             segundos  concurrencia
+ *
+ * Cuarto argumento, opcional:
+ *   health   pide GET /health en lugar de crear solicitudes (prueba del WAF, sesión 6)
+ *   <ms>     pausa entre solicitudes de cada worker: tráfico de fondo suave
+ *            (node scripts/load/carga.js $API_URL 900 1 5000 = una solicitud cada 5 s durante 15 min)
+ *
+ * Las solicitudes se crean con nombres que empiezan por "Carga ": la regla de notificaciones
+ * las excluye, así que una prueba de carga no envía correos.
  */
 const url = (process.argv[2] ?? 'http://localhost:3000').replace(/\/$/, '');
 const seconds = Number(process.argv[3] ?? 60);
 const concurrency = Number(process.argv[4] ?? 20);
+const modo = process.argv[5];
+const soloHealth = modo === 'health';
+const pausaMs = modo && !soloHealth ? Number(modo) : 0;
+const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const body = () => ({
   nombre: `Carga ${Math.random().toString(36).slice(2, 8)}`,
@@ -25,16 +37,20 @@ async function worker() {
   while (Date.now() < end) {
     const t = Date.now();
     try {
-      const r = await fetch(`${url}/solicitudes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body()),
-      });
+      const r = soloHealth
+        ? await fetch(`${url}/health`)
+        : await fetch(`${url}/solicitudes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body()),
+          });
+      await r.arrayBuffer();
       r.ok ? stats.ok++ : stats.err++;
     } catch {
       stats.err++;
     }
     stats.latencias.push(Date.now() - t);
+    if (pausaMs > 0) await dormir(pausaMs);
   }
 }
 

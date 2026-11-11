@@ -48,3 +48,20 @@ aws resourcegroupstaggingapi get-resources --tag-filters Key=Student,Values=$CF_
 ```
 
 Y revisa Cost Explorer filtrando por la etiqueta `Student` al día siguiente.
+
+## 5. Al terminar el curso
+
+```bash
+gh workflow disable deploy.yml          # tu repositorio sigue siendo tuyo; el despliegue ya no tiene a dónde ir
+aws logout --profile crediflow
+```
+
+## 6. Solo el instructor: lo que es de la cuenta
+
+- Comprobar que no queda nada de nadie: `aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=CrediFlow --query 'ResourceTagMappingList[].ResourceARN'`.
+- Desactivar GuardDuty: `aws guardduty delete-detector --detector-id <id>`.
+- Vaciar el repositorio de imágenes y el bucket de archivos de despliegue de CDK (`cdk-hnb659fds-container-assets-…` y `cdk-hnb659fds-assets-…`); si no habrá más cursos, borrar el stack `CDKToolkit`.
+- Borrar los ajustes de cuenta del curso: el proveedor OIDC de GitHub, el rol `crediflow-apigateway-logs` y el grupo `crediflow-alumnos`.
+- Desactivar o borrar los usuarios de los alumnos.
+- Al día siguiente, revisar Cost Explorer por la etiqueta `Student`.
+

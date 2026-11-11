@@ -99,7 +99,7 @@ export class EventsStack extends CrediFlowStack {
       removalPolicy: this.removalPolicy,
     });
 
-    // Regla: solo eventos de solicitudes evaluadas (filtrado por patrón)
+    // Regla: cada solicitud evaluada se notifica (menos las de las pruebas de carga)
     new events.Rule(this, 'SolicitudEvaluadaRule', {
       ruleName: this.names.resource('rule-evaluada'),
       eventBus: this.bus,
@@ -107,6 +107,8 @@ export class EventsStack extends CrediFlowStack {
       eventPattern: {
         source: ['crediflow.evaluador'],
         detailType: ['SolicitudEvaluada'],
+        // Las solicitudes de las pruebas de carga (scripts/load/carga.js) no envían correos
+        detail: { nombre: events.Match.anythingButPrefix('Carga ') },
       },
       targets: [
         new targets.SnsTopic(this.notifications.topic, {

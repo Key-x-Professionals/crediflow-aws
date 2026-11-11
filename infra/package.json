@@ -16,7 +16,7 @@
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
     "ls": "cdk ls",
-    "nag": "CF_NAG=true cdk synth --quiet"
+    "nag": "node ../scripts/nag.js"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

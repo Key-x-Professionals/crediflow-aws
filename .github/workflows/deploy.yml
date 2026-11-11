@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      prod:
+        description: 'Desplegar también a prod (crea un segundo juego de recursos con costo)'
+        type: boolean
+        default: false
 
 # OIDC: el job pide un token a GitHub y lo intercambia por credenciales temporales de AWS.
 # No hay llaves de acceso guardadas en ningún lugar.
@@ -25,6 +30,8 @@ env:
 jobs:
   dev:
     name: Desplegar a dev
+    # Hasta que el repositorio no tenga sus variables (sesión 3, bloque D) no hay nada que desplegar
+    if: ${{ vars.CF_STUDENT != '' }}
     runs-on: ubuntu-latest
     environment: dev
     env:
@@ -34,6 +41,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci --no-audit --no-fund
+
+      # La imagen de la API es ARM64 (Graviton) y el runner es x86: QEMU permite construirla
+      - uses: docker/setup-qemu-action@v3
+        with: { platforms: arm64 }
 
       - name: Credenciales AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -52,11 +63,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: outputs-dev, path: infra/outputs-dev.json }
 
+  # prod NUNCA se despliega solo: hay que lanzarlo a mano (Actions > Run workflow > prod) y,
+  # si el repositorio lo permite, además espera a un revisor (Settings > Environments > prod).
+  # En el curso se muestra la compuerta pero no se despliega: prod duplica recursos y costo.
   prod:
-    name: Desplegar a prod (requiere aprobación)
+    name: Desplegar a prod (manual y con aprobación)
     needs: dev
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.prod }}
     runs-on: ubuntu-latest
-    environment: prod   # En GitHub: Settings > Environments > prod > Required reviewers
+    environment: prod
     env:
       CF_ENV: prod
     steps:
@@ -64,6 +79,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci --no-audit --no-fund
+
+      # La imagen de la API es ARM64 (Graviton) y el runner es x86: QEMU permite construirla
+      - uses: docker/setup-qemu-action@v3
+        with: { platforms: arm64 }
 
       - name: Credenciales AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4

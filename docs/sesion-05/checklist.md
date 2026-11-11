@@ -1,31 +1,19 @@
 # Sesión 5 · Checklist de verificación (por equipo)
 
-## Serverless
+Marca cada punto solo cuando **todos** los integrantes lo hayan completado.
 
-- [ ] `Serverless` desplegado; `/health` público, `/precalificar` y `/precalificaciones` con Cognito
-- [ ] Sin token → 401; con token → 200; vi los claims del JWT
-- [ ] Ítem en DynamoDB con `pk = USER#<sub>` y puedo explicar por qué ese diseño de claves
-- [ ] Traza en X-Ray de `fn-precalificar` con el segmento de DynamoDB
-- [ ] Puedo explicar cold start, memoria vs costo y por qué ARM64
+- [ ] Leí `motor.ts`, `precalificar.ts` y `evaluador.ts`, y puedo explicar qué hace cada uno
+- [ ] `Serverless` completo: sin token 401, con token 200, y un ítem en la tabla con mi `sub`
+- [ ] Puedo explicar qué comprueba API Gateway en el token y por qué el token no debe llevar secretos
+- [ ] Cada función tiene el permiso mínimo: `precalificar` solo escribe, `consultar` solo lee, el notificador no toca tablas
+- [ ] `Events` completo y la API conectada a la cola (`queue: configured`)
+- [ ] Una solicitud pasó sola de `EN_EVALUACION` a `APROBADA` y llegó el correo
+- [ ] Vi las dos reglas actuar sobre un mismo evento (rechazo de 20,000 o más)
+- [ ] La web muestra las cuatro tarjetas en verde y la precalificación funciona con inicio de sesión
+- [ ] Idempotencia: tres mensajes de la misma solicitud, una sola evaluación; vi la marca con `expiresAt`
+- [ ] Cola de errores: el mensaje envenenado llegó tras tres intentos y la alarma avisó
+- [ ] Podemos explicar cuándo conviene un flujo asíncrono y qué exige "al menos una vez"
+- [ ] Pull request fusionado con el CI en verde
+- [ ] **`npm run apagar` terminado y `npm run costos` sin recursos por hora**
 
-## Eventos
-
-- [ ] `Events` desplegado; suscripción SNS confirmada
-- [ ] `ServiceStack` recibe la cola; `/health` → `queue: configured`
-- [ ] Una solicitud recorrió el flujo completo y llegó el correo
-- [ ] La regla de rechazo ≥ 20,000 disparó el notificador (log con otra regla)
-- [ ] Idempotencia: mensaje duplicado ignorado, ítem con TTL
-- [ ] DLQ: mensaje envenenado llegó a la DLQ, alarma en ALARM, correo recibido
-- [ ] Sé qué hace `reportBatchItemFailures` y por qué el visibility timeout es 6× el timeout
-
-## Frontend
-
-- [ ] 4 tarjetas verdes en **Estado**
-- [ ] Solicitud creada desde la web cambia sola de `EN EVALUACION` a `APROBADA/RECHAZADA`
-- [ ] Login y precalificación desde la web
-
-## Pipeline
-
-- [ ] PR mergeado; el deploy reporta `No changes` (código = realidad)
-
-**Validado por:** ____________
+La guía completa está en [guia-laboratorio.md](guia-laboratorio.md).

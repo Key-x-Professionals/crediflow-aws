@@ -1,23 +1,27 @@
-# Sesión 3 · Reto opcional: mejores prácticas de IaC
+# Sesión 3 · Reto para casa (opcional, 30-40 min, sin costo y sin desplegar)
 
-*No afecta el avance del proyecto. Elige uno.*
+**Objetivo.** Agregar dos pruebas de infraestructura y demostrar que tu pipeline bloquea un cambio que las rompe.
 
-## R1. TTL y limpieza automática en DynamoDB
+**Cómo.** En `infra/test/data-stack.test.ts` escribe dos pruebas: (1) todos los buckets tienen cifrado por defecto; (2) la tabla tiene exactamente dos índices. Una pista para cada una:
 
-En `CrediFlowTable` agrega soporte para `timeToLiveAttribute` y úsalo en la tabla `solicitudes` con un atributo `expiraEn` (epoch en segundos) que la API escriba a 30 días. Despliega, crea una solicitud con `expiraEn` en el pasado y observa cuánto tarda DynamoDB en borrarla (puede ser hasta 48 h: documenta por qué el TTL no sirve como mecanismo de negocio exacto). Escribe la prueba de `Template` que verifique `TimeToLiveSpecification`.
+```ts
+it('todos los buckets están cifrados', () => {
+  template.allResourcesProperties('AWS::S3::Bucket', {
+    BucketEncryption: Match.objectLike({ ServerSideEncryptionConfiguration: Match.anyValue() }),
+  });
+});
 
-## R2. Un construct nuevo con prueba
+it('la tabla tiene exactamente dos índices', () => {
+  const tablas = template.findResources('AWS::DynamoDB::GlobalTable');
+  const indices = Object.values(tablas)[0].Properties.GlobalSecondaryIndexes;
+  expect(indices).toHaveLength(2);
+});
+```
 
-Crea `infra/lib/constructs/crediflow-parameter.ts`: un construct que publique un objeto JSON como varios parámetros SSM (`/crediflow/<alumno>/<env>/<clave>`). Escribe una prueba con `Template.fromStack` que verifique el número de parámetros. Úsalo en `DataStack`.
+(`Match` se importa de `aws-cdk-lib/assertions`.) Comprueba con `npm test` que pasan. Después, en una rama nueva, **rompe una a propósito**: comenta el índice `porEstado` en `data-stack.ts`, haz commit, push y abre un pull request.
 
-## R3. Snapshot tests
+**Cómo comprobar.** El workflow CI del pull request debe quedar en rojo, y en el registro del paso *Pruebas* debe aparecer el nombre de tu prueba. Restaura el índice, haz commit y push: el mismo pull request debe pasar a verde. Fusiona solo entonces. (Como apagaste, el job de despliegue fallará al no encontrar el rol: es lo esperado; la próxima sesión, tras `npm run encender`, puedes relanzarlo.)
 
-Agrega `expect(template.toJSON()).toMatchSnapshot()` a las pruebas y haz un cambio a propósito para ver cómo falla. Discute en equipo cuándo conviene y cuándo estorba.
+**Qué entregas.** En el canal del curso: el enlace a tu pull request, donde se vean la ejecución en rojo y la ejecución en verde, y el código de tus dos pruebas. Si usaste IA, cuenta qué le pediste y qué tuviste que corregir.
 
-## R4. Comparar con Terraform
-
-Pide a Claude el equivalente en Terraform del `NetworkStack` (prompt 3.5). Anota 3 diferencias concretas (estado, lenguaje, construcciones de alto nivel) y una situación en la que elegirías cada uno.
-
-## R5. Proteger `main`
-
-En GitHub: *Settings → Branches → Add rule*: require PR, require status checks (`Build, pruebas y cdk synth`), require 1 approval, no force push. Intenta hacer `git push origin main` directo y observa el rechazo.
+**Bonus.** Agrega `expect(template.toJSON()).toMatchSnapshot()` y haz un cambio pequeño para ver cómo falla. ¿Cuándo ayuda una prueba así y cuándo estorba?

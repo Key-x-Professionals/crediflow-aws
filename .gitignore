@@ -24,3 +24,4 @@ coverage/
 # despliegue manual (sesión 2)
 scripts/manual/*.out
 # cdk.context.json SÍ se versiona (AZ lookups reproducibles en CI)
+scripts/simulacro/.estado-*.json

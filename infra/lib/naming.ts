@@ -24,8 +24,8 @@ export class NameBuilder {
 
   /** Nombre de stack en CloudFormation: CrediFlow-edgar-dev-Network */
   stack(name: string): string {
-    const student = this.cfg.student.replace(/[^a-zA-Z0-9]/g, '');
-    return `CrediFlow-${student}-${this.cfg.env}-${name}`;
+    // CF_STUDENT ya está validado (minúsculas, números y guiones): es válido en un nombre de stack
+    return `CrediFlow-${this.cfg.student}-${this.cfg.env}-${name}`;
   }
 
   /** Buckets S3: globales y en minúsculas; agregamos cuenta y región para unicidad */

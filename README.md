@@ -48,36 +48,37 @@ crediflow/
 │   ├── iam/                # políticas del laboratorio 1
 │   ├── manual/             # despliegue artesanal de la sesión 2 (bash y PowerShell)
 │   ├── sdk/                # ejemplo con el SDK (sesión 1)
-│   └── load/               # prueba de carga (sesión 4)
+│   ├── load/               # prueba de carga (sesiones 4 y 6)
+│   └── simulacro/          # fallas del simulacro de incidente (sesión 6, instructor)
 ├── docs/                   # guías de laboratorio, checklists, retos, prompts, cheatsheets
 └── .github/workflows/      # CI (PR) y deploy (OIDC) — sesión 3
 ```
 
 ## Empezar (sesión 1)
 
-Este repo es la **base del curso**: no tienes permiso de push. Haz tu propio **fork** y trabaja ahí.
-
-1. Abre https://github.com/Key-x-Professionals/crediflow-aws y pulsa **Fork** (crea `TU-USUARIO/crediflow-aws`).
-2. Clona tu fork y conéctalo con la base para traer actualizaciones:
+Este repositorio es la **base del curso**: es de solo lectura. Lo clonas para trabajar en tu máquina y, en la sesión 3, creas **tu propio repositorio privado** a partir de tu copia (la guía de esa sesión te lleva paso a paso).
 
 ```bash
-git clone git@github.com:TU-USUARIO/crediflow-aws.git crediflow && cd crediflow
-git remote add upstream git@github.com:Key-x-Professionals/crediflow-aws.git
-git fetch upstream --tags         # trae las etiquetas por sesión (aNN-inicio / aNN-solucion)
-
+git clone https://github.com/Key-x-Professionals/crediflow-aws.git crediflow && cd crediflow
 cp .env.example .env              # Windows: Copy-Item .env.example .env
 # edita .env: CF_STUDENT, CDK_DEFAULT_ACCOUNT, CDK_DEFAULT_REGION, CF_ALERT_EMAIL
-npm install                       # también instala el hook de avisos (core.hooksPath)
+npm install                       # también instala un aviso al hacer commit en main
 npm run verify                    # verifica herramientas y sesión de AWS
 ```
 
-`origin` = tu fork (ahí haces push). `upstream` = la base (solo lectura).
+Cómo quedan los remotos:
 
-Puntos de partida por sesión (si te atrasas, ponte al día desde la etiqueta):
+| Momento | `origin` | `base` |
+|---|---|---|
+| Sesiones 1 y 2 | Este repositorio (solo lectura) | — |
+| Desde la sesión 3 | **Tu repositorio privado** (ahí haces push y corre tu pipeline) | Este repositorio (solo lectura; de aquí traes las etiquetas) |
+
+Puntos de partida por sesión. Cada guía trae los archivos de su etiqueta al llegar:
 
 ```bash
-git checkout a03-inicio         # estado esperado al INICIAR la sesión 3
-git checkout a03-solucion       # solución completa de la sesión 3
+git fetch base --tags                                     # origin en las sesiones 1 y 2
+git checkout a04-inicio -- infra/lib/stacks infra/bin     # el punto de partida de la sesión 4
+git checkout a04-solucion -- infra/lib/stacks infra/bin   # si te atrasaste: la solución de la sesión 4
 ```
 
 ## Costo casi cero (léelo antes de desplegar)
