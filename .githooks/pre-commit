@@ -1,0 +1,13 @@
+#!/bin/sh
+# Aviso (no bloquea): en el curso se trabaja en ramas y se llega a main por pull request.
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$branch" = "main" ]; then
+  echo ""
+  echo "  AVISO: estás haciendo commit en 'main'."
+  echo "  A partir de la sesión 3 se trabaja en una rama y se llega a main por pull request:"
+  echo "      git switch -c feat/mi-cambio"
+  echo ""
+  echo "  (Es solo un aviso; el commit continúa.)"
+  echo ""
+fi
+exit 0

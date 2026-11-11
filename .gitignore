@@ -1,0 +1,27 @@
+# dependencias
+node_modules/
+# build
+dist/
+*.js
+!jest.config.js
+!scripts/**/*.js
+!apps/**/*.config.js
+*.d.ts
+# cdk
+cdk.out/
+# secretos y configuración local
+.env
+.env.*
+!.env.example
+# sistema
+.DS_Store
+Thumbs.db
+# IDE
+.vscode/
+.idea/
+# pruebas
+coverage/
+# despliegue manual (sesión 2)
+scripts/manual/*.out
+# cdk.context.json SÍ se versiona (AZ lookups reproducibles en CI)
+scripts/simulacro/.estado-*.json

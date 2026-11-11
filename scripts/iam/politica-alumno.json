@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LecturaGeneral",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetCallerIdentity",
+        "iam:GetRole",
+        "iam:ListRoles",
+        "ce:GetCostAndUsage",
+        "budgets:ViewBudget",
+        "budgets:DescribeBudget*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SoloMiPrefijoEnS3",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::crediflow-curso-compartido",
+      "Condition": { "StringLike": { "s3:prefix": ["${aws:PrincipalTag/Student}/*", "${aws:PrincipalTag/Student}"] } }
+    },
+    {
+      "Sid": "ObjetosDeMiPrefijo",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::crediflow-curso-compartido/${aws:PrincipalTag/Student}/*"
+    },
+    {
+      "Sid": "NuncaBorrarBuckets",
+      "Effect": "Deny",
+      "Action": ["s3:DeleteBucket"],
+      "Resource": "*"
+    }
+  ]
+}
