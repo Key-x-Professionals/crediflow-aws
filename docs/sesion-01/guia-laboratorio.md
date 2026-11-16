@@ -318,7 +318,7 @@ Recarga la página de **Solicitudes**: la solicitud creada por CLI aparece tambi
 | El navegador dice "no autorizado" al aprobar | Tu usuario no tiene el permiso `SignInLocalDevelopmentAccess`: avisa al instructor |
 | `Unable to locate credentials` | Falta `aws login --profile crediflow`, o `AWS_PROFILE` no está definida en esta terminal |
 | `quien-soy.js` falla con credenciales aunque la CLI funciona | Versiones viejas del SDK no entienden `login_session`. Ejecuta `npm install` en el repositorio; si persiste, el instructor te da el perfil alterno con `credential_process` |
-| `npm run verify` marca ❌ en `CF_STUDENT` | Usa solo minúsculas, números y guiones, 2-12 caracteres, igual a tu usuario |
+| `npm run verify` marca ❌ en `CF_STUDENT` | Empieza con letra minúscula; solo minúsculas, números, puntos y guiones (formato `nombre.apellido`), igual a tu usuario |
 | `AccessDenied` al crear el rol (C2) | El nombre del rol debe empezar con `crediflow-`; revisa `$ROL` |
 | `assume-role` da `AccessDenied` (C3) | El reemplazo de `STUDENT`/`ACCOUNT_ID` no se hizo, o tu usuario no se llama igual que `CF_STUDENT`: revisa `trust.json` |
 | Después de C5 sigues siendo el rol lector | Abre una terminal nueva; las variables `AWS_ACCESS_KEY_ID`… siguen definidas |

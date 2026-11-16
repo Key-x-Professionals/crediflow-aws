@@ -42,7 +42,7 @@ if (fs.existsSync(envPath)) {
     fs.readFileSync(envPath, 'utf8').split('\n').filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => l.split('=').map((x) => x.trim())),
   );
   const student = env.CF_STUDENT ?? '';
-  const studentOk = /^[a-z][a-z0-9-]{1,11}$/.test(student);
+  const studentOk = /^[a-z][a-z0-9.-]{1,30}$/.test(student);
   console.log(`${studentOk ? '✅' : '❌'} .env CF_STUDENT          ${student || '(vacío)'}`);
   console.log(`${env.CDK_DEFAULT_ACCOUNT ? '✅' : '❌'} .env CDK_DEFAULT_ACCOUNT ${env.CDK_DEFAULT_ACCOUNT || '(vacío)'}`);
   if (!studentOk || !env.CDK_DEFAULT_ACCOUNT) ok = false;
