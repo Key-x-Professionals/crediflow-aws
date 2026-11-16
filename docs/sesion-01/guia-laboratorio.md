@@ -142,6 +142,7 @@ Vas a crear un bucket (una carpeta de archivos en S3), un **rol** que solo puede
 # Mac
 export BUCKET=crediflow-$CF_STUDENT-lab1-$CDK_DEFAULT_ACCOUNT
 aws s3 mb s3://$BUCKET
+aws s3api put-bucket-tagging --bucket $BUCKET --tagging "TagSet=[{Key=Student,Value=$CF_STUDENT},{Key=Project,Value=crediflow}]"
 echo "hola desde $CF_STUDENT" > hola.txt
 aws s3 cp hola.txt s3://$BUCKET/hola.txt
 aws s3 ls s3://$BUCKET
@@ -150,12 +151,13 @@ aws s3 ls s3://$BUCKET
 # Windows
 $env:BUCKET = "crediflow-$env:CF_STUDENT-lab1-$env:CDK_DEFAULT_ACCOUNT"
 aws s3 mb s3://$env:BUCKET
+aws s3api put-bucket-tagging --bucket $env:BUCKET --tagging "TagSet=[{Key=Student,Value=$env:CF_STUDENT},{Key=Project,Value=crediflow}]"
 "hola desde $env:CF_STUDENT" | Set-Content hola.txt
 aws s3 cp hola.txt s3://$env:BUCKET/hola.txt
 aws s3 ls s3://$env:BUCKET
 ```
 
-Verifica en la consola: **S3 → Buckets** → tu bucket → el objeto `hola.txt`. Fíjate en la pestaña **Permissions**: "Block all public access: On" viene activo por defecto.
+Verifica en la consola: **S3 → Buckets** → tu bucket → el objeto `hola.txt`. Fíjate en la pestaña **Permissions**: "Block all public access: On" viene activo por defecto. El comando `put-bucket-tagging` le puso al bucket las etiquetas `Student` y `Project`: en el bloque D servirán para saber de quién es cada recurso y cuánto cuesta. Las ves en la pestaña **Properties** → Tags.
 
 ### C2. La política de solo lectura y el rol
 
@@ -188,7 +190,7 @@ Al asumir el rol, STS te entrega credenciales temporales **del rol**, no tuyas. 
 
 ```bash
 # Mac
-CREDS=$(aws sts assume-role --role-arn arn:aws:iam::$CDK_DEFAULT_ACCOUNT:role/$ROL --role-session-name lab1 --query 'Credentials' --output json)
+CREDS=$(aws sts assume-role --role-arn arn:aws:iam::${CDK_DEFAULT_ACCOUNT}:role/${ROL} --role-session-name lab1 --query 'Credentials' --output json)
 export AWS_ACCESS_KEY_ID=$(echo $CREDS | node -pe 'JSON.parse(require("fs").readFileSync(0)).AccessKeyId')
 export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | node -pe 'JSON.parse(require("fs").readFileSync(0)).SecretAccessKey')
 export AWS_SESSION_TOKEN=$(echo $CREDS | node -pe 'JSON.parse(require("fs").readFileSync(0)).SessionToken')
@@ -205,7 +207,7 @@ Remove-Item Env:AWS_PROFILE
 aws sts get-caller-identity        # ahora eres el rol lector
 ```
 
-El `Arn` ahora dice `assumed-role/crediflow-ana-p-lab1-lector/lab1`: cambiaste de identidad.
+El `Arn` ahora dice `assumed-role/crediflow-ana-p-lab1-lector/lab1`: cambiaste de identidad. Si todavía dice `user/…`, el rol no se asumió: **no sigas**. Comprueba que el comando lleva las llaves (`${CDK_DEFAULT_ACCOUNT}` y `${ROL}`) y repite C3. Sin ellas, la terminal de Mac (zsh) lee mal la variable, el rol no se asume y en C4 la escritura funcionaría, porque seguirías siendo tú.
 
 ### C4. Prueba: leer sí, escribir no
 
@@ -243,20 +245,24 @@ En la consola: **Billing and Cost Management → Free Tier** (menú de la izquie
 
 ### D2. ¿Quién gastó qué? Cost Explorer y etiquetas
 
-**Billing and Cost Management → Cost Explorer**. Agrupa por **Service** y luego filtra por la etiqueta **Student** con tu usuario: hoy estará vacío (los datos tardan hasta 24 h y todavía no has creado nada que cueste); en la sesión 3 verás tus propios recursos. Esto funciona porque todo lo que creamos lleva las etiquetas `Project`, `Student`, `Environment` y `Session`: desde la sesión 3 CDK las pone solo; hoy, en el bloque C, tú mismo etiquetaste el rol con `--tags`. Compruébalo desde la CLI:
+**Billing and Cost Management → Cost Explorer**. Agrupa por **Service** y luego filtra por la etiqueta **Student** con tu usuario: hoy estará vacío (los datos tardan hasta 24 h y todavía no has creado nada que cueste); en la sesión 3 verás tus propios recursos. Esto funciona porque todo lo que creamos lleva las etiquetas `Project`, `Student`, `Environment` y `Session`: desde la sesión 3 CDK las pone solo; hoy, en el bloque C, tú mismo etiquetaste el bucket (con `put-bucket-tagging`) y el rol (con `--tags`). Compruébalo desde la CLI:
 
 ```bash
 aws resourcegroupstaggingapi get-resources --tag-filters Key=Student,Values=$CF_STUDENT --query 'ResourceTagMappingList[].ResourceARN' --output table
+aws iam list-role-tags --role-name $ROL --output table
 ```
 ```powershell
 aws resourcegroupstaggingapi get-resources --tag-filters "Key=Student,Values=$env:CF_STUDENT" --query 'ResourceTagMappingList[].ResourceARN' --output table
+aws iam list-role-tags --role-name $env:ROL --output table
 ```
+
+El primer comando lista tu **bucket** (si la tabla sale vacía, espera un minuto y repite). Tu rol no aparece ahí, y es normal: ese servicio no cubre los recursos de IAM. Por eso sus etiquetas se consultan con el segundo comando, `aws iam list-role-tags`, que debe mostrar `Student` y `Project`. Tampoco lo echarás de menos en Cost Explorer: IAM no tiene costo.
 
 ### D3. Estima antes de crear (en equipo, 3 min)
 
 En **calculator.aws** estima el costo mensual de lo que crearán en la sesión 2: 1 instancia EC2 `t3.micro`, 1 base de datos RDS `db.t4g.micro` con 20 GB y 1 bucket con 1 GB, en us-east-1. Anota el número y luego divídelo entre 730 (horas del mes) y multiplícalo por 3: eso es lo que costará la sesión 2 si la destruyen al terminar la clase. En la sesión 2 lo comparan con el costo real.
 
-✅ **Listo cuando:** sabes dónde ver el crédito restante de la cuenta, tu rol aparece filtrando por la etiqueta `Student` y anotaste la estimación de la sesión 2.
+✅ **Listo cuando:** sabes dónde ver el crédito restante de la cuenta, tu bucket aparece filtrando por la etiqueta `Student`, tu rol muestra las suyas y anotaste la estimación de la sesión 2.
 
 ## Bloque E · El SDK y CrediFlow en tu máquina (20 min)
 
