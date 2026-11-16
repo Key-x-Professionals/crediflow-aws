@@ -2,6 +2,11 @@
 node_modules/
 # build
 dist/
+.next/
+out/
+
+# salidas de Claude
+Claude outputs/
 *.js
 !jest.config.js
 !scripts/**/*.js
