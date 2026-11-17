@@ -38,7 +38,17 @@ try {
   }
   console.log(`Recursos con etiqueta Student=${student}: ${arns.length}`);
   for (const [svc, n] of Object.entries(porServicio).sort()) console.log(`  ${svc.padEnd(22)} ${n}`);
-  const caros = arns.filter((a) => /elasticloadbalancing:.*loadbalancer|:natgateway\/|:rds:|:ecs:.*service\/|:ec2:.*instance\//.test(a));
+  let caros = arns.filter((a) => /elasticloadbalancing:.*loadbalancer|:natgateway\/|:rds:|:ecs:.*service\/|:ec2:.*instance\//.test(a));
+  // Las instancias EC2 terminadas tardan ~1 h en salir del índice de etiquetas pero ya no cobran: excluirlas.
+  const ec2Ids = caros.filter((a) => /:ec2:.*instance\//.test(a)).map((a) => a.split('/').pop());
+  if (ec2Ids.length) {
+    try {
+      const d = aws(`ec2 describe-instances --instance-ids ${ec2Ids.join(' ')}`);
+      const muertas = new Set();
+      for (const r of d.Reservations ?? []) for (const i of r.Instances ?? []) if (['terminated', 'shutting-down'].includes(i.State?.Name)) muertas.add(i.InstanceId);
+      caros = caros.filter((a) => !/:ec2:.*instance\//.test(a) || !muertas.has(a.split('/').pop()));
+    } catch { /* si falla la consulta de estado, se deja el aviso conservador */ }
+  }
   if (caros.length) {
     console.log('\n⚠️  Recursos que cobran POR HORA aunque no se usen (apágalos al terminar la sesión):');
     caros.forEach((a) => console.log('  -', a));
