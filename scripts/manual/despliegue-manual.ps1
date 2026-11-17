@@ -18,7 +18,9 @@ foreach ($f in @('.env', $estado)) {
   Get-Content $f | Where-Object { $_ -match '^\s*[^#].*=' } | ForEach-Object { $k, $v = $_ -split '=', 2; Set-Item "Env:$($k.Trim())" $v.Trim() }
 }
 $REGION = if ($env:CDK_DEFAULT_REGION) { $env:CDK_DEFAULT_REGION } else { 'us-east-1' }
-$P = "crediflow-$($env:CF_STUDENT)-manual"
+# RDS/S3/SG/IAM no admiten puntos: edgar.velasco -> edgar-velasco
+$CF_SLUG = $env:CF_STUDENT -replace '\.', '-'
+$P = "crediflow-$CF_SLUG-manual"
 
 function Guardar($k, $v) {
   $lines = Get-Content $estado | Where-Object { $_ -notmatch "^$k=" }
@@ -66,6 +68,7 @@ function Paso-Datos {
   aws s3api put-bucket-encryption --bucket $bucket --server-side-encryption-configuration '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}' --region $REGION
 
   $dbPass = aws secretsmanager get-random-password --password-length 24 --exclude-punctuation --query RandomPassword --output text --region $REGION
+  Guardar DB_ID "$P-db"
   aws rds create-db-subnet-group --db-subnet-group-name "$P-subnets" --db-subnet-group-description 'CrediFlow manual' --subnet-ids $env:SUB_PRIV1 $env:SUB_PRIV2 --region $REGION | Out-Null
   aws rds create-db-instance --db-instance-identifier "$P-db" --db-instance-class db.t4g.micro --engine postgres --engine-version 16 `
     --master-username crediflow_admin --master-user-password $dbPass --db-name crediflow `
@@ -87,7 +90,24 @@ function Paso-Codigo {
   Write-Host '== 4. Código: empaquetar la API y subirla a S3'
   $zip = 'scripts\manual\api.zip'
   if (Test-Path $zip) { Remove-Item $zip }
-  Compress-Archive -Path 'apps\api\package.json', 'apps\api\tsconfig.json', 'apps\api\src' -DestinationPath $zip
+  # El artefacto se auto-contiene: en la instancia no existe ..\..\tsconfig.base.json,
+  # así que incluimos la base y la referimos localmente (si no, tsc pierde esModuleInterop/target y falla).
+  $stage = Join-Path ([IO.Path]::GetTempPath()) ("crediflow-api-" + [Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $stage | Out-Null
+  Copy-Item 'apps\api\package.json' $stage
+  Copy-Item 'apps\api\src' $stage -Recurse
+  Copy-Item 'tsconfig.base.json' $stage
+  @'
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "src" },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}
+'@ | Set-Content (Join-Path $stage 'tsconfig.json')
+  Get-ChildItem -Path (Join-Path $stage 'src') -Recurse -Filter '*.test.ts' | Remove-Item -Force
+  Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
+  Remove-Item $stage -Recurse -Force
   aws s3 cp $zip "s3://$($env:BUCKET)/releases/api.zip" --region $REGION
   Write-Host "✅ Código en s3://$($env:BUCKET)/releases/api.zip"
 }
