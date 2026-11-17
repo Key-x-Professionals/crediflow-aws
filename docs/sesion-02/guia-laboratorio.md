@@ -27,14 +27,14 @@ La sesión de la semana pasada ya expiró. Inicia sesión, ponte en el punto de 
 ```bash
 # Mac
 aws login --profile crediflow
-git checkout a02-inicio            # punto de partida de la sesión 2
+git switch -c sesion-2 a02-inicio  # a02-inicio es un tag: crea tu rama de trabajo desde él
 npm install
 source ./scripts/mac/load-env.sh
 ```
 ```powershell
 # Windows
 aws login --profile crediflow
-git checkout a02-inicio
+git switch -c sesion-2 a02-inicio  # a02-inicio es un tag: crea tu rama de trabajo desde él
 npm install
 . .\scripts\windows\load-env.ps1
 ```
@@ -337,10 +337,10 @@ aws ec2 authorize-security-group-ingress --group-id $SG_DB --protocol tcp --port
 **Opción 2 · Snapshot de la base de datos.** Crea un respaldo manual y míralo en **RDS → Snapshots**:
 
 ```bash
-aws rds create-db-snapshot --db-instance-identifier crediflow-$CF_STUDENT-manual-db --db-snapshot-identifier crediflow-$CF_STUDENT-manual-snap1
+aws rds create-db-snapshot --db-instance-identifier $DB_ID --db-snapshot-identifier $DB_ID-snap1
 ```
 
-(Windows: `$env:CF_STUDENT`.) Si eliges esta, bórralo antes de limpiar: `aws rds delete-db-snapshot --db-snapshot-identifier crediflow-<tu usuario>-manual-snap1` (hay que esperar a que termine de crearse).
+(`$DB_ID` está en `estado.out`; cárgalo como en A2 si la variable está vacía. Windows: `$env:DB_ID`.) El identificador de RDS no admite puntos, por eso `edgar.velasco` queda como `crediflow-edgar-velasco-manual-db`: usa siempre `$DB_ID` en vez de reconstruir el nombre. Si eliges esta opción, bórrala antes de limpiar: `aws rds delete-db-snapshot --db-snapshot-identifier $DB_ID-snap1` (hay que esperar a que termine de crearse).
 
 **Opción 3 · Métricas del servidor.** En la consola, **EC2 → tu instancia → Monitoring**: CPU, red y créditos de CPU de los últimos minutos. ¿Se nota el momento de la instalación?
 
@@ -457,7 +457,7 @@ En Windows usa `$env:RETO = "crediflow-$env:CF_STUDENT-reto2-$env:CDK_DEFAULT_AC
 **Cómo comprobar.** Primero, que HTTP queda rechazado y HTTPS no:
 
 ```bash
-aws s3 ls s3://$RETO --endpoint-url http://s3.us-east-1.amazonaws.com     # AccessDenied
+aws s3 ls s3://$RETO --endpoint-url http://s3.$CDK_DEFAULT_REGION.amazonaws.com     # AccessDenied
 aws s3 ls s3://$RETO                                                       # funciona (vacío: borraste el archivo)
 ```
 

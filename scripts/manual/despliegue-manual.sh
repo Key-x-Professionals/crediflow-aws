@@ -13,9 +13,11 @@ cd "$(dirname "$0")/../.."
 set -a; source .env; set +a
 export AWS_PAGER=""
 REGION="${CDK_DEFAULT_REGION:-us-east-1}"
-P="crediflow-${CF_STUDENT}-manual"            # prefijo de todo lo que creamos a mano
+CF_SLUG="${CF_STUDENT//./-}"                   # RDS/S3/SG/IAM no admiten puntos: edgar.velasco -> edgar-velasco
+P="crediflow-${CF_SLUG}-manual"               # prefijo de todo lo que creamos a mano
 ESTADO="scripts/manual/estado.out"
 touch "$ESTADO"; set -a; source "$ESTADO"; set +a
+for v in VPC_ID SUB_PUB1 SUB_PUB2 SUB_PRIV1 SUB_PRIV2 IGW_ID RT_ID SG_APP SG_DB BUCKET DB_HOST DB_SECRET DB_ID ROLE INSTANCE_ID PUBLIC_IP; do declare "$v=${!v:-}"; done
 guardar() { grep -v "^$1=" "$ESTADO" > "$ESTADO.tmp" || true; echo "$1=$2" >> "$ESTADO.tmp"; mv "$ESTADO.tmp" "$ESTADO"; export "$1=$2"; echo "   $1=$2"; }
 tag() { aws ec2 create-tags --resources "$1" --tags Key=Name,Value="$2" Key=Student,Value="$CF_STUDENT" Key=Project,Value=crediflow Key=ManagedBy,Value=manual --region "$REGION"; }
 
@@ -55,6 +57,7 @@ paso_datos() {
   aws s3api put-bucket-encryption --bucket "$BUCKET" --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}' --region "$REGION"
 
   DB_PASS=$(aws secretsmanager get-random-password --password-length 24 --exclude-punctuation --query RandomPassword --output text --region "$REGION")
+  guardar DB_ID "$P-db"
   aws rds create-db-subnet-group --db-subnet-group-name "$P-subnets" --db-subnet-group-description "CrediFlow manual" --subnet-ids "$SUB_PRIV1" "$SUB_PRIV2" --region "$REGION" > /dev/null
   aws rds create-db-instance --db-instance-identifier "$P-db" --db-instance-class db.t4g.micro --engine postgres --engine-version 16 \
     --master-username crediflow_admin --master-user-password "$DB_PASS" --db-name crediflow \
@@ -71,7 +74,21 @@ paso_datos() {
 
 paso_codigo() {
   echo "== 4. Código: empaquetar la API y subirla a S3"
-  (cd apps/api && zip -qr ../../scripts/manual/api.zip package.json tsconfig.json src -x '*.test.ts')
+  local root stage; root="$(pwd)"; stage="$(mktemp -d)"
+  cp apps/api/package.json "$stage/"; cp -R apps/api/src "$stage/"; cp tsconfig.base.json "$stage/"
+  # El artefacto se auto-contiene: en la instancia no existe ../../tsconfig.base.json,
+  # así que incluimos la base y la referimos localmente (si no, tsc pierde esModuleInterop/target y falla).
+  cat > "$stage/tsconfig.json" <<'JSON'
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "src" },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}
+JSON
+  rm -f "$root/scripts/manual/api.zip"
+  (cd "$stage" && zip -qr "$root/scripts/manual/api.zip" package.json tsconfig.json tsconfig.base.json src -x '*.test.ts')
+  rm -rf "$stage"
   aws s3 cp scripts/manual/api.zip "s3://$BUCKET/releases/api.zip" --region "$REGION"
   echo "✅ Código en s3://$BUCKET/releases/api.zip"
 }
@@ -109,24 +126,26 @@ paso_verificar() {
 
 paso_limpiar() {
   echo "== Limpieza de TODO lo creado a mano (orden inverso)"
-  aws ec2 terminate-instances --instance-ids "$INSTANCE_ID" --region "$REGION" > /dev/null && aws ec2 wait instance-terminated --instance-ids "$INSTANCE_ID" --region "$REGION" || true
-  aws iam remove-role-from-instance-profile --instance-profile-name "$ROLE" --role-name "$ROLE" || true
-  aws iam delete-instance-profile --instance-profile-name "$ROLE" || true
-  aws iam delete-role-policy --role-name "$ROLE" --policy-name crediflow-minimo || true
-  aws iam detach-role-policy --role-name "$ROLE" --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore || true
-  aws iam delete-role --role-name "$ROLE" || true
-  aws rds delete-db-instance --db-instance-identifier "$P-db" --skip-final-snapshot --delete-automated-backups --region "$REGION" > /dev/null || true
-  echo "   Esperando a que RDS se elimine (5 min)..."; aws rds wait db-instance-deleted --db-instance-identifier "$P-db" --region "$REGION" || true
-  aws rds delete-db-subnet-group --db-subnet-group-name "$P-subnets" --region "$REGION" || true
-  aws secretsmanager delete-secret --secret-id "$DB_SECRET" --force-delete-without-recovery --region "$REGION" > /dev/null || true
-  aws s3 rm "s3://$BUCKET" --recursive --region "$REGION" || true; aws s3api delete-bucket --bucket "$BUCKET" --region "$REGION" || true
-  aws ec2 delete-security-group --group-id "$SG_DB" --region "$REGION" || true
-  aws ec2 delete-security-group --group-id "$SG_APP" --region "$REGION" || true
-  for s in "$SUB_PUB1" "$SUB_PUB2" "$SUB_PRIV1" "$SUB_PRIV2"; do aws ec2 delete-subnet --subnet-id "$s" --region "$REGION" || true; done
-  aws ec2 delete-route-table --route-table-id "$RT_ID" --region "$REGION" || true
-  aws ec2 detach-internet-gateway --internet-gateway-id "$IGW_ID" --vpc-id "$VPC_ID" --region "$REGION" || true
-  aws ec2 delete-internet-gateway --internet-gateway-id "$IGW_ID" --region "$REGION" || true
-  aws ec2 delete-vpc --vpc-id "$VPC_ID" --region "$REGION" || true
+  if [ -n "$INSTANCE_ID" ]; then aws ec2 terminate-instances --instance-ids "$INSTANCE_ID" --region "$REGION" >/dev/null 2>&1 || true; aws ec2 wait instance-terminated --instance-ids "$INSTANCE_ID" --region "$REGION" 2>/dev/null || true; fi
+  if [ -n "$ROLE" ]; then
+    aws iam remove-role-from-instance-profile --instance-profile-name "$ROLE" --role-name "$ROLE" 2>/dev/null || true
+    aws iam delete-instance-profile --instance-profile-name "$ROLE" 2>/dev/null || true
+    aws iam delete-role-policy --role-name "$ROLE" --policy-name crediflow-minimo 2>/dev/null || true
+    aws iam detach-role-policy --role-name "$ROLE" --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore 2>/dev/null || true
+    aws iam delete-role --role-name "$ROLE" 2>/dev/null || true
+  fi
+  if aws rds delete-db-instance --db-instance-identifier "$P-db" --skip-final-snapshot --delete-automated-backups --region "$REGION" >/dev/null 2>&1; then
+    echo "   Esperando a que RDS se elimine (5 min)..."; aws rds wait db-instance-deleted --db-instance-identifier "$P-db" --region "$REGION" 2>/dev/null || true
+  fi
+  aws rds delete-db-subnet-group --db-subnet-group-name "$P-subnets" --region "$REGION" 2>/dev/null || true
+  if [ -n "$DB_SECRET" ]; then aws secretsmanager delete-secret --secret-id "$DB_SECRET" --force-delete-without-recovery --region "$REGION" >/dev/null 2>&1 || true; fi
+  if [ -n "$BUCKET" ]; then aws s3 rm "s3://$BUCKET" --recursive --region "$REGION" 2>/dev/null || true; aws s3api delete-bucket --bucket "$BUCKET" --region "$REGION" 2>/dev/null || true; fi
+  if [ -n "$SG_DB" ]; then aws ec2 delete-security-group --group-id "$SG_DB" --region "$REGION" 2>/dev/null || true; fi
+  if [ -n "$SG_APP" ]; then aws ec2 delete-security-group --group-id "$SG_APP" --region "$REGION" 2>/dev/null || true; fi
+  for s in "$SUB_PUB1" "$SUB_PUB2" "$SUB_PRIV1" "$SUB_PRIV2"; do [ -n "$s" ] && { aws ec2 delete-subnet --subnet-id "$s" --region "$REGION" 2>/dev/null || true; }; done
+  if [ -n "$RT_ID" ]; then aws ec2 delete-route-table --route-table-id "$RT_ID" --region "$REGION" 2>/dev/null || true; fi
+  if [ -n "$IGW_ID" ]; then [ -n "$VPC_ID" ] && aws ec2 detach-internet-gateway --internet-gateway-id "$IGW_ID" --vpc-id "$VPC_ID" --region "$REGION" 2>/dev/null; aws ec2 delete-internet-gateway --internet-gateway-id "$IGW_ID" --region "$REGION" 2>/dev/null || true; fi
+  if [ -n "$VPC_ID" ]; then aws ec2 delete-vpc --vpc-id "$VPC_ID" --region "$REGION" 2>/dev/null || true; fi
   rm -f "$ESTADO" scripts/manual/api.zip scripts/manual/user-data.rendered.out
   echo "✅ Limpieza terminada"
 }

@@ -25,7 +25,7 @@ En Windows usa `$env:RETO = "crediflow-$env:CF_STUDENT-reto2-$env:CDK_DEFAULT_AC
 **Cómo comprobar.** Primero, que HTTP queda rechazado y HTTPS no:
 
 ```bash
-aws s3 ls s3://$RETO --endpoint-url http://s3.us-east-1.amazonaws.com     # AccessDenied
+aws s3 ls s3://$RETO --endpoint-url http://s3.$CDK_DEFAULT_REGION.amazonaws.com     # AccessDenied
 aws s3 ls s3://$RETO                                                       # funciona (vacío: borraste el archivo)
 ```
 
