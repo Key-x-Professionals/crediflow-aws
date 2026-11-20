@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 # =============================================================================
 # Sesión 2 · Despliegue "artesanal" de CrediFlow con la AWS CLI (Windows / PowerShell)
 #
@@ -8,6 +9,8 @@
 # =============================================================================
 param([Parameter(Mandatory = $true)][ValidateSet('red', 'seguridad', 'datos', 'codigo', 'servidor', 'verificar', 'limpiar', 'todo')][string]$Paso)
 $ErrorActionPreference = 'Stop'
+# Que un fallo de `aws` detenga el script (equivale al `set -e` del .sh). Efectivo en PowerShell 7.4+.
+$PSNativeCommandUseErrorActionPreference = $true
 $env:AWS_PAGER = ''
 Set-Location (Join-Path $PSScriptRoot '..\..')
 
@@ -23,7 +26,8 @@ $CF_SLUG = $env:CF_STUDENT -replace '\.', '-'
 $P = "crediflow-$CF_SLUG-manual"
 
 function Guardar($k, $v) {
-  $lines = Get-Content $estado | Where-Object { $_ -notmatch "^$k=" }
+  # @(...) fuerza una lista: con una sola línea Get-Content devuelve un texto y el + lo concatenaría.
+  $lines = @(Get-Content $estado | Where-Object { $_ -and $_ -notmatch "^$k=" })
   $lines + "$k=$v" | Set-Content $estado
   Set-Item "Env:$k" $v
   Write-Host "   $k=$v"
@@ -65,7 +69,7 @@ function Paso-Datos {
   if ($REGION -eq 'us-east-1') { aws s3api create-bucket --bucket $bucket --region $REGION | Out-Null }
   else { aws s3api create-bucket --bucket $bucket --region $REGION --create-bucket-configuration "LocationConstraint=$REGION" | Out-Null }
   aws s3api put-public-access-block --bucket $bucket --public-access-block-configuration 'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true' --region $REGION
-  aws s3api put-bucket-encryption --bucket $bucket --server-side-encryption-configuration '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}' --region $REGION
+  aws s3api put-bucket-encryption --bucket $bucket --server-side-encryption-configuration 'Rules=[{ApplyServerSideEncryptionByDefault={SSEAlgorithm=AES256}}]' --region $REGION
 
   $dbPass = aws secretsmanager get-random-password --password-length 24 --exclude-punctuation --query RandomPassword --output text --region $REGION
   Guardar DB_ID "$P-db"
@@ -115,8 +119,11 @@ function Paso-Codigo {
 function Paso-Servidor {
   Write-Host '== 5. Servidor: rol IAM, instance profile y EC2 con user data'
   $role = "$P-ec2-role"; Guardar ROLE $role
-  $trust = '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}'
-  aws iam create-role --role-name $role --assume-role-policy-document $trust | Out-Null
+  # El JSON va por archivo: así no depende de cómo cada versión de PowerShell escapa las comillas.
+  $trust = '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+  $tmpTrust = New-TemporaryFile; Set-Content $tmpTrust $trust
+  aws iam create-role --role-name $role --assume-role-policy-document "file://$tmpTrust" | Out-Null
+  Remove-Item $tmpTrust
   aws iam attach-role-policy --role-name $role --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
   $policy = @{
     Version = '2012-10-17'
@@ -155,7 +162,7 @@ function Paso-Verificar {
 
 function Paso-Limpiar {
   Write-Host '== Limpieza de TODO lo creado a mano'
-  $ErrorActionPreference = 'Continue'
+  $ErrorActionPreference = 'Continue'; $PSNativeCommandUseErrorActionPreference = $false   # aquí los errores de lo que no existe se ignoran
   aws ec2 terminate-instances --instance-ids $env:INSTANCE_ID --region $REGION | Out-Null; aws ec2 wait instance-terminated --instance-ids $env:INSTANCE_ID --region $REGION
   aws iam remove-role-from-instance-profile --instance-profile-name $env:ROLE --role-name $env:ROLE
   aws iam delete-instance-profile --instance-profile-name $env:ROLE
