@@ -26,6 +26,10 @@ Thumbs.db
 .idea/
 # pruebas
 coverage/
+# laboratorio sesión 1 — artefactos locales que genera cada alumno (no se versionan)
+hola.txt
+politica.json
+trust.json
 # despliegue manual (sesión 2) — artefactos locales generados en la práctica
 scripts/manual/*.out
 scripts/manual/*.log
