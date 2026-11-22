@@ -1,11 +1,6 @@
 /**
  * CicdStack (sesión 3): rol para GitHub Actions con OIDC.
  *
- * TODO (laboratorio, bloque D):
- *   1. Crear GithubOidcRole con roleName this.names.role('github-deploy'),
- *      githubRepo this.cfg.githubRepo y existingProviderArn de props
- *   2. Exportar DeployRoleArn
- *
  * Después de desplegarlo, el ARN del rol se guarda como secreto
  * AWS_DEPLOY_ROLE_ARN en el repositorio de GitHub de cada alumno.
  */
@@ -19,12 +14,17 @@ export interface CicdStackProps extends CrediFlowStackProps {
 }
 
 export class CicdStack extends CrediFlowStack {
-  public readonly deployRole!: GithubOidcRole;
+  public readonly deployRole: GithubOidcRole;
 
   constructor(scope: Construct, id: string, props: CicdStackProps) {
     super(scope, id, props);
 
-    // TODO: this.deployRole = new GithubOidcRole(this, 'GithubDeploy', { ... });
-    // TODO: this.crossStackExport('DeployRoleArn', ...);
+    this.deployRole = new GithubOidcRole(this, 'GithubDeploy', {
+      roleName: this.names.role('github-deploy'),
+      githubRepo: this.cfg.githubRepo,
+      existingProviderArn: props.existingProviderArn,
+    });
+
+    this.crossStackExport('DeployRoleArn', this.deployRole.role.roleArn, 'Rol que asume GitHub Actions');
   }
 }
