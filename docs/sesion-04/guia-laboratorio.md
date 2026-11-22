@@ -247,18 +247,22 @@ Invoke-RestMethod -Method Post -Uri "$env:API_URL/solicitudes" -ContentType "app
 
 ### D1. Autorreparación
 
-En una terminal, vigila `/health` una vez por segundo:
+En una terminal **nueva**, carga el entorno (`load-env` ya deja `CLUSTER` y `SERVICIO` listos) y la dirección de la API (`API_URL` no sale de `load-env`: lee el parámetro SSM que publicó tu stack), luego vigila `/health` una vez por segundo:
 
 ```bash
 # Terminal 1 (Mac)
+source ./scripts/mac/load-env.sh
+export API_URL=$(aws ssm get-parameter --name /crediflow/$CF_STUDENT/dev/api-url --query Parameter.Value --output text)
 while true; do curl -s -o /dev/null -w "%{http_code} " $API_URL/health; sleep 1; done
 ```
 ```powershell
 # Terminal 1 (Windows)
+. .\scripts\windows\load-env.ps1
+$env:API_URL = aws ssm get-parameter --name "/crediflow/$env:CF_STUDENT/dev/api-url" --query Parameter.Value --output text
 while ($true) { try { Write-Host -NoNewline "$((Invoke-WebRequest "$env:API_URL/health" -UseBasicParsing).StatusCode) " } catch { Write-Host -NoNewline "ERR " }; Start-Sleep 1 }
 ```
 
-En otra terminal (carga el entorno y las variables `CLUSTER` y `SERVICIO` de C2), mata una tarea a propósito y mira qué hace el servicio:
+En otra terminal **nueva** (ejecuta `load-env`: ya deja `CLUSTER` y `SERVICIO` listos), mata una tarea a propósito y mira qué hace el servicio:
 
 ```bash
 # Terminal 2 (Mac)
@@ -279,10 +283,19 @@ Recuerda la pregunta de la sesión 2: "¿qué pasa si el servidor se apaga a las
 
 ### D2. Prueba de carga y autoscaling
 
-Deja el vigilante de la terminal 1 y lanza 30 clientes concurrentes durante 3 minutos:
+Deja el vigilante en la terminal 1 y, en una terminal **nueva** (carga el entorno y `API_URL`), lanza 30 clientes concurrentes durante 3 minutos:
 
 ```bash
-node scripts/load/carga.js $API_URL 180 30          # Windows: node scripts\load\carga.js $env:API_URL 180 30
+# Mac — terminal nueva
+source ./scripts/mac/load-env.sh
+export API_URL=$(aws ssm get-parameter --name /crediflow/$CF_STUDENT/dev/api-url --query Parameter.Value --output text)
+node scripts/load/carga.js $API_URL 180 30
+```
+```powershell
+# Windows — terminal nueva
+. .\scripts\windows\load-env.ps1
+$env:API_URL = aws ssm get-parameter --name "/crediflow/$env:CF_STUDENT/dev/api-url" --query Parameter.Value --output text
+node scripts\load\carga.js $env:API_URL 180 30
 ```
 
 Mientras corre, en otra terminal o en la consola (**ECS → tu servicio → Health and metrics**, y la pestaña **Tasks**):

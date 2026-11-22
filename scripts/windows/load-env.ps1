@@ -16,6 +16,10 @@ if ($cf.Length -gt 14) {
 $env:CF_STUDENT = $cf
 if ($cfRaw -ne $cf) { Write-Host "ℹ️  CF_STUDENT normalizado: `"$cfRaw`" -> `"$cf`"" }
 
+$envName = if ($env:CF_ENV) { $env:CF_ENV } else { "dev" }
+$env:CLUSTER = "crediflow-$env:CF_STUDENT-$envName-api-cluster"
+$env:SERVICIO = "crediflow-$env:CF_STUDENT-$envName-api"
+
 if (-not $env:AWS_PROFILE) { $env:AWS_PROFILE = "crediflow" }
 Write-Host "CF_STUDENT=$env:CF_STUDENT  CF_ENV=$env:CF_ENV  cuenta=$env:CDK_DEFAULT_ACCOUNT  región=$env:CDK_DEFAULT_REGION  perfil=$env:AWS_PROFILE"
 try { aws sts get-caller-identity --output table } catch { Write-Host "⚠️  Sin sesión: ejecuta  aws login --profile $env:AWS_PROFILE" }
