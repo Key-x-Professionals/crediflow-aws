@@ -1,0 +1,39 @@
+# dependencias
+node_modules/
+# build
+dist/
+.next/
+out/
+
+# salidas de Claude
+Claude outputs/
+*.js
+!jest.config.js
+!scripts/**/*.js
+!apps/**/*.config.js
+*.d.ts
+# cdk
+cdk.out/
+# secretos y configuración local
+.env
+.env.*
+!.env.example
+# sistema
+.DS_Store
+Thumbs.db
+# IDE
+.vscode/
+.idea/
+# pruebas
+coverage/
+# laboratorio sesión 1 — artefactos locales que genera cada alumno (no se versionan)
+hola.txt
+politica.json
+trust.json
+# despliegue manual (sesión 2) — artefactos locales generados en la práctica
+scripts/manual/*.out
+scripts/manual/*.log
+scripts/manual/api.zip
+# cdk.context.json SÍ se versiona (AZ lookups reproducibles en CI)
+scripts/simulacro/.estado-*.json
+.claude/settings.local.json
