@@ -9,6 +9,18 @@ npm run apagar      # cdk destroy --all --force
 npm run costos      # nada "por hora" debe quedar encendido
 ```
 
+> **Si `costos` lista recursos justo después de `apagar`:** es normal. El índice de
+> etiquetas de AWS (`resourcegroupstaggingapi`) tarda hasta ~1 h en reflejar borrados.
+> Los servicios/clusters ECS y las task definitions quedan como `INACTIVE` o registrados
+> pero **no cobran**; los VPC endpoints aparecen aunque ya no existan. `costos` ya filtra
+> los que de verdad siguen cobrando (verifica estado de EC2 y ECS). Si aún ves el aviso
+> "⚠️ cobran POR HORA", confirma el estado real:
+>
+> ```bash
+> aws ecs describe-services --cluster <cluster> --services <svc> \
+>   --query 'services[].status' --output text    # INACTIVE = borrado, no cobra
+> ```
+
 ## 1. Recursos de CDK (sesiones 3 a 6), al terminar el curso
 
 ```bash

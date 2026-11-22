@@ -49,6 +49,16 @@ try {
       caros = caros.filter((a) => !/:ec2:.*instance\//.test(a) || !muertas.has(a.split('/').pop()));
     } catch { /* si falla la consulta de estado, se deja el aviso conservador */ }
   }
+  // Los servicios ECS borrados quedan INACTIVE en el índice de etiquetas ~1 h pero ya no cobran: excluirlos.
+  const ecsSvcs = caros.filter((a) => /:ecs:.*service\//.test(a)).map((a) => a.split(':service/').pop());
+  for (const cs of ecsSvcs) {
+    const [cluster, service] = cs.split('/');
+    try {
+      const d = aws(`ecs describe-services --cluster ${cluster} --services ${service}`);
+      const activo = (d.services ?? []).some((s) => s.status === 'ACTIVE');
+      if (!activo) caros = caros.filter((a) => !a.endsWith(`:service/${cs}`));
+    } catch { /* si falla la consulta de estado, se deja el aviso conservador */ }
+  }
   if (caros.length) {
     console.log('\n⚠️  Recursos que cobran POR HORA aunque no se usen (apágalos al terminar la sesión):');
     caros.forEach((a) => console.log('  -', a));
