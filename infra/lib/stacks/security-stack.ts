@@ -5,9 +5,6 @@
  *    asociado al ALB de la API y a la etapa de API Gateway
  *  - GuardDuty y CloudTrail: son recursos ÚNICOS por cuenta/región.
  *    Solo se crean cuando CF_ACCOUNT_SECURITY=true (normalmente los despliega el instructor una vez).
- *
- * El stack viene casi completo para que lo LEAS. Te toca escribir (TODO del bloque B):
- * la regla de límite de tasa y la asociación del WAF a la API de precalificación.
  */
 import * as cdk from 'aws-cdk-lib';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
@@ -55,9 +52,13 @@ export class SecurityStack extends CrediFlowStack {
         managedRule('AWSManagedRulesCommonRuleSet', 1),
         managedRule('AWSManagedRulesKnownBadInputsRuleSet', 2),
         managedRule('AWSManagedRulesAmazonIpReputationList', 3),
-        // TODO (bloque B): regla de límite de tasa 'RateLimitPorIp' (priority 10, action: { block: {} }):
-        //   statement: { rateBasedStatement: { limit: 500, aggregateKeyType: 'IP' } }
-        //   y el mismo visibilityConfig de las demás, con metricName 'RateLimitPorIp'
+        {
+          name: 'RateLimitPorIp',
+          priority: 10,
+          action: { block: {} },
+          statement: { rateBasedStatement: { limit: 500, aggregateKeyType: 'IP' } },
+          visibilityConfig: { sampledRequestsEnabled: true, cloudWatchMetricsEnabled: true, metricName: 'RateLimitPorIp' },
+        },
       ],
     });
 
@@ -66,8 +67,10 @@ export class SecurityStack extends CrediFlowStack {
       webAclArn: this.webAcl.attrArn,
     });
 
-    // TODO (bloque B): asocia el mismo WebACL a la etapa de API Gateway (precalificación):
-    //   new wafv2.CfnWebACLAssociation(this, 'ApiAssociation', { resourceArn: props.restApi.deploymentStage.stageArn, ... })
+    new wafv2.CfnWebACLAssociation(this, 'ApiAssociation', {
+      resourceArn: props.restApi.deploymentStage.stageArn,
+      webAclArn: this.webAcl.attrArn,
+    });
 
     // Logs del WAF (el nombre del log group DEBE empezar con aws-waf-logs-)
     const wafLogs = new logs.LogGroup(this, 'WafLogs', {
