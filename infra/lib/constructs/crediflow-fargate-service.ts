@@ -72,7 +72,7 @@ export class CrediFlowFargateService extends Construct {
     const pattern = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
       cluster: this.cluster,
       serviceName: props.serviceName,
-      loadBalancerName: `${props.serviceName}-alb`.slice(0, 32),
+      loadBalancerName: `${props.serviceName}-alb`.slice(0, 32).replace(/-+$/, ''),
       cpu: props.cpu ?? 256,
       memoryLimitMiB: props.memoryLimitMiB ?? 512,
       desiredCount: props.minCapacity ?? 2,
