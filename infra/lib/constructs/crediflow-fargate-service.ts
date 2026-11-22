@@ -102,8 +102,22 @@ export class CrediFlowFargateService extends Construct {
     this.targetGroup = pattern.targetGroup;
     this.taskDefinition = pattern.taskDefinition;
 
+    const healthPath = props.healthCheckPath ?? '/health';
+
+    // ECS ignora el HEALTHCHECK del Dockerfile; sin healthCheck en la task def la
+    // columna "Health status" queda en Unknown. taskImageOptions no lo expone, así
+    // que se inyecta con override L1 sobre el contenedor 'api' (índice 0).
+    const cfnTaskDef = this.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
+    cfnTaskDef.addPropertyOverride('ContainerDefinitions.0.HealthCheck', {
+      Command: ['CMD-SHELL', `wget -qO- http://127.0.0.1:${port}${healthPath} || exit 1`],
+      Interval: 30,
+      Timeout: 5,
+      Retries: 3,
+      StartPeriod: 15,
+    });
+
     this.targetGroup.configureHealthCheck({
-      path: props.healthCheckPath ?? '/health',
+      path: healthPath,
       interval: cdk.Duration.seconds(15),
       healthyThresholdCount: 2,
       unhealthyThresholdCount: 3,
