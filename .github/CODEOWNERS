@@ -1,0 +1,4 @@
+# Cada cambio en infraestructura requiere revisión del equipo.
+# Reemplaza @mi-usuario por los integrantes de tu equipo.
+/infra/            @mi-usuario
+/.github/          @mi-usuario
