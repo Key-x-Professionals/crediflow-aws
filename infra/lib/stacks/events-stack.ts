@@ -8,9 +8,6 @@
  *
  *  - DLQ con alarma para mensajes que fallan 3 veces
  *  - Idempotencia con tabla DynamoDB (TTL 24 h) por messageId/solicitudId
- *
- * El stack viene casi completo para que lo LEAS. Te toca escribir (TODO del bloque B):
- * la conexión cola → worker, los permisos mínimos del worker y la regla con filtro por contenido.
  */
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
@@ -76,12 +73,16 @@ export class EventsStack extends CrediFlowStack {
       },
       removalPolicy: this.removalPolicy,
     });
-    // TODO (bloque B): conecta la cola con el worker:
-    //   this.workerFn.fn.addEventSource(new lambdaEvents.SqsEventSource(this.queue.queue, { ... }))
-    //   con batchSize 5, reportBatchItemFailures true y maxConcurrency 5
-    // TODO (bloque B): permisos mínimos del worker: leer/escribir la tabla de solicitudes y la de
-    //   idempotencia (grantReadWriteData) y publicar en el bus (this.bus.grantPutEventsTo)
-    void lambdaEvents; // elimina esta línea al completar el TODO
+    this.workerFn.fn.addEventSource(
+      new lambdaEvents.SqsEventSource(this.queue.queue, {
+        batchSize: 5,
+        reportBatchItemFailures: true,
+        maxConcurrency: 5,
+      }),
+    );
+    props.solicitudes.table.grantReadWriteData(this.workerFn.fn);
+    this.idempotencyTable.table.grantReadWriteData(this.workerFn.fn);
+    this.bus.grantPutEventsTo(this.workerFn.fn);
 
     // ---- Notificaciones --------------------------------------------------
     this.notifications = new AlertTopic(this, 'Notificaciones', {
@@ -119,10 +120,17 @@ export class EventsStack extends CrediFlowStack {
       ],
     });
 
-    // TODO (bloque B): segunda regla, con filtrado por contenido: solo los RECHAZOS de monto >= 20000
-    //   van al notificador. Copia la regla de arriba, llámala 'RechazoAltoMontoRule'
-    //   (ruleName: this.names.resource('rule-rechazo-alto')) y agrega al patrón:
-    //   detail: { resultado: ['RECHAZADA'], monto: [{ numeric: ['>=', 20000] }] }
+    // Regla: solo rechazos de alto monto (ejemplo de filtrado por contenido)
+    new events.Rule(this, 'RechazoAltoMontoRule', {
+      ruleName: this.names.resource('rule-rechazo-alto'),
+      eventBus: this.bus,
+      eventPattern: {
+        source: ['crediflow.evaluador'],
+        detailType: ['SolicitudEvaluada'],
+        detail: { resultado: ['RECHAZADA'], monto: [{ numeric: ['>=', 20000] }] },
+      },
+      targets: [new targets.LambdaFunction(notificadorFn.fn)],
+    });
 
     // Alarmas -> correo
     this.notifications.bind(this.queue.dlqAlarm);
