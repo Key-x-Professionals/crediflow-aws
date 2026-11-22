@@ -5,7 +5,7 @@
  * de manera que cada alumno despliega SUS propios recursos sin tocar código.
  *
  * Ejemplo:
- *   CF_STUDENT=edgar CF_ENV=dev npx cdk deploy
+ *   CF_STUDENT=edgar-velasco CF_ENV=dev npx cdk deploy
  */
 import * as path from 'path';
 import * as dotenv from 'dotenv';
@@ -18,7 +18,7 @@ export type Environment = 'dev' | 'prod';
 export interface CrediFlowConfig {
   /** Nombre del proyecto. Siempre "crediflow". */
   readonly project: string;
-  /** Identificador del alumno, ej. "edgar". Prefijo de todos los recursos. */
+  /** Identificador del alumno, ej. "edgar-velasco". Prefijo de todos los recursos. */
   readonly student: string;
   /** Entorno lógico: dev | prod */
   readonly env: Environment;
@@ -50,13 +50,27 @@ function required(name: string, fallback?: string): string {
   return value;
 }
 
-function validateStudent(student: string): string {
-  if (!/^[a-z][a-z0-9-]{1,11}$/.test(student)) {
+/**
+ * Normaliza CF_STUDENT a un identificador válido para nombres de recursos:
+ * minúsculas, puntos/espacios/símbolos a guion, y recorte a 14 caracteres
+ * cortando en el último guion completo (para que el nombre del stack no se pase
+ * de largo). "Edgar.Velasco" -> "edgar-velasco"; "maria.jose.perez" -> "maria-jose".
+ * Debe producir el MISMO resultado que scripts/mac/load-env.sh.
+ */
+export function sanitizeStudent(raw: string): string {
+  const norm = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!norm) {
     throw new Error(
-      `CF_STUDENT="${student}" no es válido. Usa 2-12 caracteres: minúsculas, números y guiones (ej. "maria-p").`,
+      `CF_STUDENT="${raw}" no deja ningún carácter válido. Usa tu nombre, ej. "edgar-velasco".`,
     );
   }
-  return student;
+  if (norm.length <= 14) return norm;
+  const cut = norm.slice(0, 14).replace(/-+$/, '');
+  return cut.includes('-') ? cut.replace(/-[^-]*$/, '') : cut;
 }
 
 export function loadConfig(): CrediFlowConfig {
@@ -66,7 +80,7 @@ export function loadConfig(): CrediFlowConfig {
   }
   return {
     project: 'crediflow',
-    student: validateStudent(required('CF_STUDENT')),
+    student: sanitizeStudent(required('CF_STUDENT')),
     env,
     account: required('CDK_DEFAULT_ACCOUNT'),
     region: required('CDK_DEFAULT_REGION', 'us-east-1'),
