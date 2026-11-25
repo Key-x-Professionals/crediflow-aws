@@ -62,7 +62,10 @@ export default function SolicitudesPage() {
               <td>{money(s.monto)}</td>
               <td>{s.plazoMeses} meses</td>
               <td>{s.proposito}</td>
-              <td><span className={`badge ${s.estado}`}>{s.estado.replace('_', ' ')}</span></td>
+              <td>
+                <span className={`badge ${s.estado}`}>{s.estado.replace('_', ' ')}</span>
+                {s.resultado && <div className="meta">{s.resultado.motivo} (score {s.resultado.score})</div>}
+              </td>
               <td className="meta">{new Date(s.creadaEn).toLocaleString('es-SV')}</td>
             </tr>
           ))}
