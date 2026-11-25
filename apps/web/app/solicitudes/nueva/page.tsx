@@ -9,7 +9,7 @@ const ejemplo = {
   documento: '01234567-8',
   monto: 5000,
   plazoMeses: 24,
-  ingresoMensual: 1200,
+  ingresoMensual: 1500,
   proposito: 'consumo',
 };
 
